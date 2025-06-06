@@ -1,0 +1,21 @@
+{
+  "name": "PiPER-control",
+  "version": "0.1.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev-https": "next dev --experimental-https",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "aframe": "^1.6.0",
+    "aframe-troika-text": "^0.13.0",
+    "bootstrap": "^5.3.3",
+    "mqtt": "^5.10.4",
+    "next": "15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}
