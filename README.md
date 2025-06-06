@@ -1,4 +1,4 @@
-The IK is based on Modern Robotics. 
+The IK is based on Modern Robotics. \
 
 Source code: https://github.com/NxRLab/ModernRobotics
 
