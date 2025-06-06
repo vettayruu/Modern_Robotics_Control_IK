@@ -1,0 +1,48 @@
+.controller{
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    width: 300px;
+    background-color:rgba(192,192,192,0.2);
+    padding: 10px;
+    display: grid;
+    button {
+        margin: 5px;
+    }
+}
+.camera-controller{
+    position: fixed;
+    top: 30px;
+    left: 20px;
+    width: 300px;
+    background-color:rgba(192,192,192,0.2);
+    padding: 10px;
+    display: grid;
+    button {
+        margin: 5px;
+    }
+}
+
+.joint-controll-panel {
+  position: fixed;
+  top: 300px;         /* 根据实际页面调整 */
+  right: 380px;       /* 距离右侧边距 */
+  width: 500px;      /* 或你想要的宽度 */
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 16px;
+  z-index: 100;
+}
+
+.modern-robot-controll-panel {
+  position: fixed;
+  top: 600px;         /* 根据实际页面调整 */
+  right: 80px;       /* 距离右侧边距 */
+  width: 600px;      /* 或你想要的宽度 */
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 16px;
+  z-index: 100;
+}
