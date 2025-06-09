@@ -25,8 +25,12 @@ export default function RobotScene(props) {
   return (
     <>
       <a-scene scene xr-mode-ui="XRMode: ar">
+        {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
+
         <Assets viewer={props.viewer} monitor={props.monitor}/>
+
+        {/* Robot */}
         <Select_Robot {...robotProps}/>
 
         {/* Light */}

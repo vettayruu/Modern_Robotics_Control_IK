@@ -93,11 +93,13 @@ export default function useVrController({
 this.el.addEventListener('triggerdown', () => {
   start_rotation.current = this.el.object3D.rotation.clone();
   const wk_start_pos = new window.AFRAME.THREE.Vector3().applyMatrix4(this.el.object3D.matrix);
-  set_start_pos(wk_start_pos);
+  // set_start_pos(wk_start_pos);
+  console.log('triggerdown 事件触发');
   set_trigger_on(true);
 });
 this.el.addEventListener('triggerup', () => {
   save_rotation.current = current_rotation.clone();
-  set_save_target(undefined);
+  // set_save_target(undefined);
+  console.log('triggerup 事件触发');
   set_trigger_on(false);
 });

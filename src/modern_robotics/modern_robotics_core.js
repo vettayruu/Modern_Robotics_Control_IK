@@ -24,11 +24,7 @@ function NearZero(z) {
     Output:
         np.array([0.26726124, 0.53452248, 0.80178373])
  */
-function Normalize(V) {
-    const norm = Math.sqrt(V.reduce((sum, v) => sum + v * v, 0));
-    if (NearZero(norm)) return V; // if norm is near zero, return original vector
-    return V.map(v => v / norm);
-}
+
 
 /**
  * Computes the Euclidean norm of a vector
@@ -43,6 +39,12 @@ function Norm(v) {
     // Computes the Euclidean norm of a vector
     return Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
 }
+
+// function Normalize(V) {
+//     const norm = Math.sqrt(V.reduce((sum, v) => sum + v * v, 0));
+//     if (NearZero(norm)) return V.map(() => 0); // 如果模长接近0，返回全0向量
+//     return V.map(v => v / norm);
+// }
 
 /**
  * Creates an n x n identity matrix
@@ -232,6 +234,16 @@ function worlr2three(v) {
     return matDot(R_three, v);
 }
 
+function three2world(v) {
+    // R_three的逆（转置）即为three到world的变换
+    const R_three_inv = [
+        [0, 0, -1],
+        [-1, 0, 0],
+        [0, 1, 0]
+    ];
+    return matDot(R_three_inv, v);
+}
+
 /**
  * 将旋转矩阵转换为四元数 [x, y, z, w]
  * @param {Array<Array<number>>} R 3x3旋转矩阵
@@ -270,99 +282,30 @@ function RotMatToQuaternion(R) {
     return [x, y, z, w];
 }
 
-function normalizeAngle(angle) {
-    // 归一化到[-180, 180]
-    angle = ((angle + 180) % 360) - 180;
-    // if (angle < -180) angle += 360;
-    if (Math.abs(angle) === 180) angle = 0;
-    return angle;
-}
-
 /**
- * Space-fixed rotation matrix to Euler angles (XYZ order)
- */
-function QuaternionToEulerXYZ(q) {
-    const [x, y, z, w] = q;
-    // roll (X)
-    const sinr_cosp = 2 * (w * x + y * z);
-    const cosr_cosp = 1 - 2 * (x * x + y * y);
-    const roll = Math.atan2(sinr_cosp, cosr_cosp);
-    // pitch (Y)
-    let sinp = 2 * (w * y - z * x);
-    sinp = Math.max(-1, Math.min(1, sinp)); // 限制在[-1,1]
-    const pitch = Math.asin(sinp);
-    // yaw (Z)
-    const siny_cosp = 2 * (w * z + x * y);
-    const cosy_cosp = 1 - 2 * (y * y + z * z);
-    const yaw = Math.atan2(siny_cosp, cosy_cosp);
-    // let result = rad2deg([roll+Math.PI, pitch+Math.PI, yaw]);
-    // result = result.map(normalizeAngle);
-    return [roll, pitch, yaw]; // [roll(X), pitch(Y), yaw(Z)]
-}
-
-function RotMatToEulerXYZ(R) {
-    const quat = RotMatToQuaternion(R);
-    return QuaternionToEulerXYZ(quat);
-}
-
-/**
- * 将欧拉角（XYZ顺序，单位：度）转换为旋转矩阵
- * @param {Array<number>} euler [roll(X), pitch(Y), yaw(Z)]，单位：度
+ * 将四元数 [x, y, z, w] 转换为旋转矩阵
+ * @param {Array<number>} q 四元数 [x, y, z, w]
  * @returns {Array<Array<number>>} 3x3旋转矩阵
  */
-function EulerXYZToRotMat(euler) {
-    // 转为弧度
-    const [roll, pitch, yaw] = euler;
-
-    // 依次绕X、Y、Z轴旋转
-    const cx = Math.cos(roll), sx = Math.sin(roll);
-    const cy = Math.cos(pitch), sy = Math.sin(pitch);
-    const cz = Math.cos(yaw), sz = Math.sin(yaw);
-
-    // R = Rz(yaw) * Ry(pitch) * Rx(roll)（ZYX顺序）
-    const R = [
+function QuaternionToRotMat(q) {
+    const [x, y, z, w] = q;
+    return [
         [
-            cy * cz,
-            cz * sx * sy - cx * sz,
-            sx * sz + cx * cz * sy
+            1 - 2 * (y * y + z * z),
+            2 * (x * y - z * w),
+            2 * (x * z + y * w)
         ],
         [
-            cy * sz,
-            cx * cz + sx * sy * sz,
-            cx * sy * sz - cz * sx
+            2 * (x * y + z * w),
+            1 - 2 * (x * x + z * z),
+            2 * (y * z - x * w)
         ],
         [
-            -sy,
-            cy * sx,
-            cx * cy
+            2 * (x * z - y * w),
+            2 * (y * z + x * w),
+            1 - 2 * (x * x + y * y)
         ]
     ];
-    return R;
-}
-
-/**
- * Body-fixed rotation matrix to Euler angles (ZYX order)
- */
-function QuaternionToEulerZYX(q) {
-    const [x, y, z, w] = q;
-    // yaw (Z)
-    const siny_cosp = 2 * (w * z + x * y);
-    const cosy_cosp = 1 - 2 * (y * y + z * z);
-    const yaw = Math.atan2(siny_cosp, cosy_cosp);
-    // pitch (Y)
-    let sinp = 2 * (w * y - z * x);
-    sinp = Math.max(-1, Math.min(1, sinp));
-    const pitch = Math.asin(sinp);
-    // roll (X)
-    const sinr_cosp = 2 * (w * x + y * z);
-    const cosr_cosp = 1 - 2 * (x * x + y * y);
-    const roll = Math.atan2(sinr_cosp, cosr_cosp);
-    return [yaw, pitch, roll]; // [yaw(Z), pitch(Y), roll(X)]
-}
-
-function RotMatToEulerZYX(R) {
-    const quat = RotMatToQuaternion(R);
-    return QuaternionToEulerZYX(quat);
 }
 
 /**
@@ -401,10 +344,28 @@ function RotMatToEuler(R, order = "ZYX") {
             z = 0;
         }
         return [x, y, z]; // [roll(X), pitch(Y), yaw(Z)]
+    } else if (order === "ZYZ") {
+        // ZYZ欧拉角
+        let beta = Math.acos(R[2][2]);
+        let alpha, gamma;
+        if (Math.abs(beta) < 1e-6) {
+            // beta ~ 0
+            alpha = 0;
+            gamma = Math.atan2(R[0][1], R[0][0]);
+        } else if (Math.abs(beta - Math.PI) < 1e-6) {
+            // beta ~ pi
+            alpha = 0;
+            gamma = -Math.atan2(R[0][1], R[0][0]);
+        } else {
+            alpha = Math.atan2(R[1][2], R[0][2]);
+            gamma = Math.atan2(R[2][1], -R[2][0]);
+        }
+        return [alpha, beta, gamma]; // [Z1, Y, Z2]
     } else {
         throw new Error("Unsupported Euler order: " + order);
     }
 }
+
 
 /**
  * 将欧拉角转换为旋转矩阵
@@ -439,38 +400,13 @@ function EulerToRotMat(euler, order = "ZYX") {
     } else if (order === "XYZ") {
         // [roll(X), pitch(Y), yaw(Z)]
         return matDot(matDot(Rx, Ry), Rz);
-    } else {
+    } else if (order === "ZYZ") {
+        // [roll(X), pitch(Y), yaw(Z)]
+        return matDot(matDot(Rz, Ry), Rz);
+    } 
+    else {
         throw new Error("Unsupported Euler order: " + order);
     }
-}
-
-/**
- * 将欧拉角（ZYX顺序，单位：弧度）转换为旋转矩阵
- * @param {Array<number>} euler [yaw(Z), pitch(Y), roll(X)]，单位：弧度
- * @returns {Array<Array<number>>} 3x3旋转矩阵
- */
-function EulerZYXToRotMat(euler) {
-    const [yaw, pitch, roll] = euler;
-    // 绕Z轴旋转
-    const Rz = [
-        [Math.cos(yaw), -Math.sin(yaw), 0],
-        [Math.sin(yaw),  Math.cos(yaw), 0],
-        [0, 0, 1]
-    ];
-    // 绕Y轴旋转
-    const Ry = [
-        [ Math.cos(pitch), 0, Math.sin(pitch)],
-        [0, 1, 0],
-        [-Math.sin(pitch), 0, Math.cos(pitch)]
-    ];
-    // 绕X轴旋转
-    const Rx = [
-        [1, 0, 0],
-        [0, Math.cos(roll), -Math.sin(roll)],
-        [0, Math.sin(roll),  Math.cos(roll)]
-    ];
-    const R = matDot(matDot(Rz, Ry), Rx);
-    return R
 }
 
 
@@ -556,9 +492,9 @@ function AxisAng3(expc3) {
     const norm = Norm(expc3);
     if (NearZero(norm)) {
         // If norm is near zero, return zero vector and zero angle
-        return [Normalize(expc3), 0];
+        return [Norm(expc3), 0];
     }
-    const omghat = Normalize(expc3);
+    const omghat = Norm(expc3);
     const theta = norm;
     // Return the unit axis and the angle
     return [omghat, theta];
@@ -653,7 +589,7 @@ function MatrixLog3(R) {
                 R[2][0] / Math.sqrt(2 * (1 + R[0][0]))
             ];
         }
-        omg = Normalize(omg);
+        omg = Norm(omg);
         return VecToso3(omg.map(x => Math.PI * x));
     } else {
         const theta = Math.acos(acosinput);
@@ -907,10 +843,10 @@ function AxisAng6(expc6) {
     const norm = Norm(expc6.slice(0, 3));
     if (NearZero(norm)) {
         // If the first three elements are near zero, normalize the last three
-        return [Normalize(expc6.slice(3, 6)), 0];
+        return [Norm(expc6.slice(3, 6)), 0];
     }
     // Normalize the first three elements to get the screw axis
-    const S = Normalize(expc6.slice(0, 3));
+    const S = Norm(expc6.slice(0, 3));
     // Compute the theta value as the norm of the first three elements
     const theta = Norm(expc6.slice(3, 6));
     // Scale the second half of the vector by theta
@@ -1832,7 +1768,6 @@ function CartesianTrajectory(Xstart, Xend, Tf, N, method) {
 module.exports = {
     /* Basic Functions */
     NearZero,
-    Normalize,
     Norm,
     Eye,
     matDot,
@@ -1842,19 +1777,11 @@ module.exports = {
     deg2rad,
     rad2deg,
     worlr2three,
+    three2world,
     RotMatToQuaternion,
-    //Space-fixed rotation
-    QuaternionToEulerXYZ,
-    RotMatToEulerXYZ,
-    EulerXYZToRotMat,
-    //Body-fixed rotation
-    QuaternionToEulerZYX,
-    RotMatToEulerZYX,
-    EulerZYXToRotMat,
-
+    QuaternionToRotMat,
     RotMatToEuler,
     EulerToRotMat,
-    
     /* Chapter 3: Rigid Body Kinematics */
     RotInv,
     VecToso3,

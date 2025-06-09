@@ -1,6 +1,3 @@
-import { joint_pos } from '../lib/robot_globals.js'
-import { calc_side_2 } from '../lib/ik_utils'
-
 let registered = false;
 
 export default function registerAframeComponents(options) {
@@ -9,35 +6,20 @@ export default function registerAframeComponents(options) {
 
   const {
     set_rendered,
-    set_p14_maxlen,
-    set_p11_object, set_p12_object, set_p13_object, set_p14_object, set_p15_object, set_p16_object,
-    set_p20_object, set_p21_object, set_p22_object, set_p51_object,
-    target_p16_ref,
     robotChange,
     set_controller_object,
-    set_start_pos,
     set_trigger_on,
-    set_save_target,
     set_c_pos_x, set_c_pos_y, set_c_pos_z,
     set_c_deg_x, set_c_deg_y, set_c_deg_z,
     vrModeRef,
-    currentRotationRef,
-    start_rotation,
-    save_rotation,
     controller_object,
     order,
     props,
     onAnimationMQTT,
     onXRFrameMQTT,
-    object3DtableREF // 新增：通过参数传递 ref
   } = options;
 
   setTimeout(() => set_rendered(true), 10);
-
-  const teihen = joint_pos.j5.x;
-  const takasa = joint_pos.j3.y + joint_pos.j4.y;
-  const result = calc_side_2(teihen, takasa);
-  set_p14_maxlen(result.s);
 
   AFRAME.registerComponent('robot-click', {
     init: function () {
@@ -48,46 +30,15 @@ export default function registerAframeComponents(options) {
     }
   });
 
-  AFRAME.registerComponent('j_id', {
-    schema: { type: 'number', default: 0 },
-    init: function () {
-      const idx = this.data;
-      if (idx >= 1 && idx <= 6) object3DtableREF.current[idx - 1] = this.el.object3D;
-      else if (idx === 11) set_p11_object(this.el.object3D);
-      else if (idx === 12) set_p12_object(this.el.object3D);
-      else if (idx === 13) set_p13_object(this.el.object3D);
-      else if (idx === 14) set_p14_object(this.el.object3D);
-      else if (idx === 15) set_p15_object(this.el.object3D);
-      else if (idx === 16) {
-        set_p16_object(this.el.object3D);
-        target_p16_ref.current = this.el.object3D;
-      }
-      else if (idx === 20) set_p20_object(this.el.object3D);
-      else if (idx === 21) set_p21_object(this.el.object3D);
-      else if (idx === 22) set_p22_object(this.el.object3D);
-      else if (idx === 51) set_p51_object(this.el.object3D);
-    },
-    remove: function () {
-      if (this.data === 16) {
-        set_p16_object(this.el.object3D);
-      }
-    }
-  });
-
   AFRAME.registerComponent('vr-controller-right', {
     schema: { type: 'string', default: '' },
     init: function () {
       set_controller_object(this.el.object3D);
       this.el.object3D.rotation.order = order;
       this.el.addEventListener('triggerdown', () => {
-        start_rotation.current = this.el.object3D.rotation.clone();
-        const wk_start_pos = new window.AFRAME.THREE.Vector3().applyMatrix4(this.el.object3D.matrix);
-        set_start_pos(wk_start_pos);
         set_trigger_on(true);
       });
       this.el.addEventListener('triggerup', () => {
-        save_rotation.current = currentRotationRef.current.clone();
-        set_save_target(undefined);
         set_trigger_on(false);
       });
     },

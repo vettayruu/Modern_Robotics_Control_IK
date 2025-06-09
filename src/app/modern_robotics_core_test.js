@@ -490,21 +490,47 @@ const mr = require('../modern_robotics/modern_robotics_core.js');
 // pos_three = mr.matDot(R_three, pos_world);
 // console.log("pos_world:", pos_three);
 
-const M = [
-    [-1, 0,  0, 0],
-    [ 0, 1,  0, 6],
-    [ 0, 0, -1, 2],
-    [ 0, 0,  0, 1]
+// const M = [
+//     [-1, 0,  0, 0],
+//     [ 0, 1,  0, 6],
+//     [ 0, 0, -1, 2],
+//     [ 0, 0,  0, 1]
+// ];
+
+// const Slist = [
+//     [0,  0,  0],
+//     [0,  0,  0],
+//     [1,  0,  -1],
+//     [4,  0,  -6],
+//     [0,  1,  0],
+//     [0,  0, -0.1]
+// ]; // 6x3，每列为一个关节的螺旋轴
+
+// const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
+// console.log("Blist", Blist);
+
+const R_test = [
+  [-0.6657, 0.3053, 0.6809],
+  [0.4169, 0.9090, 0.0],
+  [-0.6189, 0.2839, -0.7324]
 ];
+const [alpha, beta, gamma] = mr.RotMatToEuler(R_test, "XYZ");
+console.log("alpha:", alpha);
+console.log("beta:", beta);
+console.log("gamma:", gamma);
 
-const Slist = [
-    [0,  0,  0],
-    [0,  0,  0],
-    [1,  0,  -1],
-    [4,  0,  -6],
-    [0,  1,  0],
-    [0,  0, -0.1]
-]; // 6x3，每列为一个关节的螺旋轴
+// import * as THREE from 'three';
 
-const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
-console.log("Blist", Blist);
+// const rotMatrix = new THREE.Matrix4();
+// // 假设你已经设置了 4x4 的旋转矩阵 rotMatrix
+
+// const R_test = [
+//   [-0.6657, 0.3053, 0.6809],
+//   [0.4169, 0.9090, 0.0],
+//   [-0.6189, 0.2839, -0.7324]
+// ];
+
+// const euler = new THREE.Euler();
+// euler.setFromRotationMatrix(rotMatrix, 'ZYX'); // 指定顺序
+
+// console.log(euler.x, euler.y, euler.z); 
