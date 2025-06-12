@@ -15,14 +15,23 @@ const order = 'ZYX'; // 欧拉角顺序
 
 const mr = require('../modern_robotics/modern_robotics_core.js');
 const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
-
+const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
 // 创建 piper_agilex 机器人运动学对象
-const rk = new RobotKinematics("piper_agilex");
+const rk = new RobotDynamcis("piper_agilex");
 
 // 获取 M 和 Slist
 const M = rk.get_M();
+const Mlist = rk.get_Mlist();
+const Glist = rk.get_Glist();
 const Slist = rk.get_Slist();
-const jointLimits = rk.jointLimits; // 获取关节限制
+const Kplist = rk.get_Kplist(); 
+const Kilist = rk.get_Kilist(); 
+const Kdlist = rk.get_Kdlist(); 
+const jointLimits = rk.jointLimits;
+
+console.log("Mlist:", Mlist);
+console.log("Glist:", Glist);
+
 
 // 全局常量与变量定义
 const MQTT_REQUEST_TOPIC = "mgr/request";
@@ -133,10 +142,6 @@ export default function DynamicHome(props) {
   props,
   set_rendered,
   robotIDRef,
-  // joint_pos,
-  // round,
-  // toAngle,
-  // order,
   publishMQTT,
   MQTT_REQUEST_TOPIC, MQTT_DEVICE_TOPIC, MQTT_CTRL_TOPIC, MQTT_ROBOT_STATE_TOPIC,
   receiveStateRef,
@@ -198,27 +203,6 @@ export default function DynamicHome(props) {
     }
   }
 
-  // A-Frame 组件注册（如 robot-click、j_id、vr-controller-right、jtext、scene 等自定义组件）
-  // 注册自定义 A-Frame 组件，绑定回调和状态
-  // const start_rotation = React.useRef();
-  // const save_rotation = React.useRef();
-  React.useEffect(() => {
-    registerAframeComponents({
-      set_rendered,
-      robotChange,
-      set_controller_object,
-      set_trigger_on,
-      set_c_pos_x, set_c_pos_y, set_c_pos_z,
-      set_c_deg_x, set_c_deg_y, set_c_deg_z,
-      vrModeRef,
-      currentRotationRef,
-      controller_object,
-      order,
-      props,
-      onAnimationMQTT,
-      onXRFrameMQTT,
-    });
-  }, []);
 
   /*** Forward Kinematics Part ***/
   // Initial joint and tool angles
@@ -253,11 +237,11 @@ export default function DynamicHome(props) {
   // const twist_ee_initial = [omghat0, theta0]
   // const [twist_ee, setTwistEE] = React.useState(twist_ee_initial);
 
-  // Update end effector position and orientation 
+  // Update end effector position and orientation (for webcontroller)
   React.useEffect(() => {
     // const T = mr.FKinSpace(M, Slist, theta_body);
     const T = mr.FKinBody(M, Blist, theta_body);
-    console.log("current T:", T);
+    // console.log("current T:", T);
 
     const [R, p] = mr.TransToRp(T);
 
@@ -295,36 +279,76 @@ export default function DynamicHome(props) {
     }
   }
 
-  /** Quaternioin Control **/
-  // function handleTargetChange(T_sd) {
-  //   /* Space-fixed IK, use Slist */
-  //   const [thetalist_sol, ik_success] = mr.IKinSpace(Slist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
+  const targetReachedRef = React.useRef(true);
+  const animatingRef = React.useRef(false);
+  /** Dynamics Control **/
+  function DynamicsTargetChange(newPos, newEuler) {
+    if (animatingRef.current) return; // 动画未结束时不触发新的仿真
+    animatingRef.current = true;
+    /* Body-fixed IK, use Blist */
+    const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, order), newPos);
+    const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
 
-  //   /* Body-fixed IK, use Blist */
-  //   // const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
+    const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
+      Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
+      );
 
-  //   if (ik_success) {
-  //     const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
-  //     Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
-  //     );
-  //     setThetaBody(thetalist_sol_limited);
-  //     setThetaBodyGuess(thetalist_sol_limited);
-  //   } else {
-  //     console.warn("IK failed to converge");
-  //   }
-  // }
+    const dt = 0.01;
+    const steps = 200;
+
+    const q0 = theta_body_guess.slice();
+    const dq0 = Array(q0.length).fill(0);
+
+    const q_ref = thetalist_sol_limited.slice();
+    const dq_ref = Array(q_ref.length).fill(0);
+    
+    const [q_hist, dq_hist] = mr.simulate_PIDcontrol(q0, dq0, q_ref, dq_ref, dt, steps, Mlist, Glist, Slist, Kplist, Kilist, Kdlist)
+    
+    // if (ik_success) {
+    //   setThetaBody(q_hist[q_hist.length - 1]);
+    //   setThetaBodyGuess(q_hist[q_hist.length - 1]);
+    // }
+
+    if (ik_success) {
+      setTimeout(() => {
+        let idx = 0;
+        function animate() {
+          if (idx < q_hist.length) {
+            setThetaBody(q_hist[idx]);
+            setThetaBodyGuess(q_hist[idx]);
+            idx += 1; // 可调节步进
+            setTimeout(animate, 1);
+          } else {
+          // 动画播放结束，判断是否到达目标
+          const q_last = q_hist[q_hist.length - 1];
+          const q_err = Math.sqrt(q_last.reduce((sum, v, i) => sum + Math.pow(v - q_ref[i], 2), 0));
+          if (q_err < 0.01) { // 阈值可调
+            targetReachedRef.current = true; // 允许更新控制器参考
+            animatingRef.current = false;
+          } else {
+            targetReachedRef.current = false;
+          }
+        }
+      }
+      animate();
+      }, 0);
+    } 
+
+    else {
+      console.warn("IK failed to converge");
+    }
+  }
 
   /* VR Controller State */
   const lastPosRef = React.useRef(controller_object.position.clone());
   const lastEulerRef = React.useRef(controller_object.rotation.clone());
-  const lastQuatRef = React.useRef(controller_object.quaternion.clone());
+  // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
   const PosstepSize = 0.65; // 控制器移动步长
   const EulerstepSize = 0.45; // 控制器移动步长
 
   /* Euler angle control */
   React.useEffect(() => {
     if (rendered && vrModeRef.current && trigger_on) {
-      // 位置差分
       const deltaPos = {
         x: controller_object.position.x - lastPosRef.current.x,
         y: controller_object.position.y - lastPosRef.current.y,
@@ -359,7 +383,6 @@ export default function DynamicHome(props) {
         currentEuler[2] - EulerstepSize * deltaEuler_World[0]
       ];
 
-
       // joint6 控制：用 VR 控制器的 z 轴旋转直接控制 joint6
       // 你可以用 rotation.z，也可以用 position.z 的变化
       // const joint6_delta = controller_object.rotation.z - lastEulerRef.current.z;
@@ -376,6 +399,8 @@ export default function DynamicHome(props) {
 
       // // 3. 调用逆解
       EulerhandleTargetChange(newPos, newEuler);
+      // DynamicsTargetChange(newPos, newEuler);
+      
 
     }
     // 4. 更新上一帧位置
@@ -406,7 +431,8 @@ export default function DynamicHome(props) {
     position_ee, setPositionEE,
     euler_ee, setEuler,
     // twist_ee, setTwistEE
-    onTargetChange: EulerhandleTargetChange,
+    // onTargetChange: EulerhandleTargetChange,
+    onTargetChange: DynamicsTargetChange,
   }), [
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
@@ -419,8 +445,28 @@ export default function DynamicHome(props) {
     position_ee, setPositionEE,
     euler_ee, setEuler,
     // twist_ee, setTwistEE
-    EulerhandleTargetChange
+    // EulerhandleTargetChange,
+    DynamicsTargetChange
   ]);
+
+  // VRController Inputs (Aframe Components)
+  React.useEffect(() => {
+    registerAframeComponents({
+      set_rendered,
+      robotChange,
+      set_controller_object,
+      set_trigger_on,
+      set_c_pos_x, set_c_pos_y, set_c_pos_z,
+      set_c_deg_x, set_c_deg_y, set_c_deg_z,
+      vrModeRef,
+      currentRotationRef,
+      controller_object,
+      order,
+      props,
+      onAnimationMQTT,
+      onXRFrameMQTT,
+    });
+  }, []);
 
   // Robot Model Update Props
   const robotProps = React.useMemo(() => ({

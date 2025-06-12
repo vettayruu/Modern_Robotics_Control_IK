@@ -84,21 +84,6 @@ function Eye(n) {
  *     [43, 50]
  *   ];
  */
-// function matDot(A, B) {
-//     const m = A.length;
-//     const n = A[0].length;
-//     const p = B[0].length;
-//     let result = Array.from({ length: m }, () => Array(p).fill(0));
-//     for (let i = 0; i < m; i++) {
-//         for (let j = 0; j < p; j++) {
-//             for (let k = 0; k < n; k++) {
-//                 result[i][j] += A[i][k] * B[k][j];
-//             }
-//         }
-//     }
-//     return result;
-// }
-
 function matDot(A, B) {
     // 如果B是一维向量，自动转为列向量
     if (Array.isArray(B[0]) === false) {
@@ -243,6 +228,8 @@ function three2world(v) {
     ];
     return matDot(R_three_inv, v);
 }
+
+
 
 /**
  * 将旋转矩阵转换为四元数 [x, y, z, w]
@@ -1462,7 +1449,7 @@ function JacobianSpace(Slist, thetalist) {
 function IKinBody(Blist, M, T, thetalist0, eomg, ev) {
     let thetalist = thetalist0.slice();
     let i = 0;
-    const maxiterations = 20;
+    const maxiterations = 50;
     let Tsb = FKinBody(M, Blist, thetalist);
     let Vb = se3ToVec(MatrixLog6(matDot(TransInv(Tsb), T)));
     let err = (Norm(Vb.slice(0, 3)) > eomg) || (Norm(Vb.slice(3, 6)) > ev);
@@ -1538,6 +1525,434 @@ function IKinSpace(Slist, M, T, thetalist0, eomg, ev) {
 
 
 /*** CHAPTER 8: DYNAMICS OF OPEN CHAINS ***/ 
+
+/**
+ * Calculate the 6x6 matrix [adV] of the given 6-vector
+ * @param {Array<number>} V  A 6-vector spatial velocity
+ * @returns {Array<Array<number>>} The corresponding 6x6 matrix [adV]
+ * 
+ * Used to calculate the Lie bracket [V1, V2] = [adV1]V2
+ * 
+ * Example Input:
+ *   V = [1, 2, 3, 4, 5, 6]
+ * Output:
+ *   [
+ *     [ 0, -3,  2,  0,  0,  0],
+ *     [ 3,  0, -1,  0,  0,  0],
+ *     [-2,  1,  0,  0,  0,  0],
+ *     [ 0, -6,  5,  0, -3,  2],
+ *     [ 6,  0, -4,  3,  0, -1],
+ *     [-5,  4,  0, -2,  1,  0]
+ *   ]
+ */
+function ad(V) {
+    const omgmat = VecToso3([V[0], V[1], V[2]]);
+    const vmat = VecToso3([V[3], V[4], V[5]]);
+    // 6x6 matrix adV
+    let adV = Array.from({ length: 6 }, () => Array(6).fill(0));
+    // left up 3x3
+    for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+            adV[i][j] = omgmat[i][j];
+    // right up 3x3 as 0
+    // left down 3x3
+    for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+            adV[i + 3][j] = vmat[i][j];
+    // right down 3x3
+    for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+            adV[i + 3][j + 3] = omgmat[i][j];
+    return adV;
+}
+
+
+/**
+ * Computes inverse dynamics in the space frame for an open chain robot
+ * @param {Array<number>} thetalist n-vector of joint variables
+ * @param {Array<number>} dthetalist n-vector of joint rates
+ * @param {Array<number>} ddthetalist n-vector of joint accelerations
+ * @param {Array<number>} g Gravity vector g
+ * @param {Array<number>} Ftip Spatial force applied by the end-effector expressed in frame {n+1}
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames {i} relative to {i-1} at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist 6xn，Screw axes Si of the joints in a space frame, in the format
+                  of a matrix with axes as the columns
+ * @returns {Array<number>} The n-vector of required joint forces/torques
+
+    This function uses forward-backward Newton-Euler iterations to solve the equation:
+    taulist = Mlist(thetalist)ddthetalist + c(thetalist,dthetalist) + g(thetalist) + Jtr(thetalist)Ftip
+
+    Example (3 Link Robot):
+        const thetalist = [0.1, 0.1, 0.1];
+        const dthetalist = [0.1, 0.2, 0.3];
+        const ddthetalist = [2, 1.5, 1];
+        const g = [0, 0, -9.8];
+        const Ftip = [1, 1, 1, 1, 1, 1];
+
+        const M01 = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0.089159],
+            [0, 0, 0, 1]
+        ];
+        const M12 = [
+            [0, 0, 1, 0.28],
+            [0, 1, 0, 0.13585],
+            [-1, 0, 0, 0],
+            [0, 0, 0, 1]
+        ];
+        const M23 = [
+            [1, 0, 0, 0],
+            [0, 1, 0, -0.1197],
+            [0, 0, 1, 0.395],
+            [0, 0, 0, 1]
+        ];
+        const M34 = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0.14225],
+            [0, 0, 0, 1]
+        ];
+        const G1 = [
+            [0.010267, 0, 0, 0, 0, 0],
+            [0, 0.010267, 0, 0, 0, 0],
+            [0, 0, 0.00666, 0, 0, 0],
+            [0, 0, 0, 3.7, 0, 0],
+            [0, 0, 0, 0, 3.7, 0],
+            [0, 0, 0, 0, 0, 3.7]
+        ];
+        const G2 = [
+            [0.22689, 0, 0, 0, 0, 0],
+            [0, 0.22689, 0, 0, 0, 0],
+            [0, 0, 0.0151074, 0, 0, 0],
+            [0, 0, 0, 8.393, 0, 0],
+            [0, 0, 0, 0, 8.393, 0],
+            [0, 0, 0, 0, 0, 8.393]
+        ];
+        const G3 = [
+            [0.0494433, 0, 0, 0, 0, 0],
+            [0, 0.0494433, 0, 0, 0, 0],
+            [0, 0, 0.004095, 0, 0, 0],
+            [0, 0, 0, 2.275, 0, 0],
+            [0, 0, 0, 0, 2.275, 0],
+            [0, 0, 0, 0, 0, 2.275]
+        ];
+        const Glist = [G1, G2, G3];
+        const Mlist = [M01, M12, M23, M34];
+        const Slist = [
+            [1, 0, 0],
+            [0, 1, 1],
+            [1, 0, 0],
+            [0, -0.089, -0.089],
+            [1, 0, 0],
+            [0, 0, 0.425]
+        ];
+
+        const taulist = mr.InverseDynamics(
+            thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist
+        );
+
+        console.log("InverseDynamics Output:");
+        console.log(taulist);
+        // Desired output: [74.69616155, -33.06766016, -3.23057314]
+ */
+function InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist) {
+    const n = thetalist.length;
+    let Mi = Eye(4);
+    let Ai = Array.from({ length: 6 }, () => Array(n).fill(0));
+    let AdTi = Array(n + 1).fill(null);
+    let Vi = Array.from({ length: 6 }, () => Array(n + 1).fill(0));
+    let Vdi = Array.from({ length: 6 }, () => Array(n + 1).fill(0));
+    // Vdi[:, 0] = [0, 0, 0, -g]
+    for (let i = 0; i < 3; i++) Vdi[i][0] = 0;
+    for (let i = 0; i < 3; i++) Vdi[i + 3][0] = -g[i];
+    AdTi[n] = Adjoint(TransInv(Mlist[n]));
+    let Fi = Ftip.slice();
+    let taulist = Array(n).fill(0);
+
+    // 前向递推
+    for (let i = 0; i < n; i++) {
+        Mi = matDot(Mi, Mlist[i]);
+        // Ai[:, i] = Adjoint(TransInv(Mi)) * Slist[:, i]
+        const Scol = Slist.map(row => row[i]);
+        const AdTinvMi = Adjoint(TransInv(Mi));
+        for (let r = 0; r < 6; r++) {
+            Ai[r][i] = 0;
+            for (let c = 0; c < 6; c++) {
+                Ai[r][i] += AdTinvMi[r][c] * Scol[c];
+            }
+        }
+        // AdTi[i] = Adjoint(MatrixExp6(VecTose3(Ai[:,i]*-thetalist[i])) * TransInv(Mlist[i]))
+        const Ai_theta = Ai.map(row => row[i] * -thetalist[i]);
+        const exp6 = MatrixExp6(VecTose3(Ai_theta));
+        const AdT = Adjoint(matDot(exp6, TransInv(Mlist[i])));
+        AdTi[i] = AdT;
+        // Vi[:, i+1] = AdTi[i] * Vi[:,i] + Ai[:,i] * dthetalist[i]
+        for (let r = 0; r < 6; r++) {
+            Vi[r][i + 1] = 0;
+            for (let c = 0; c < 6; c++) {
+                Vi[r][i + 1] += AdT[r][c] * Vi[c][i];
+            }
+            Vi[r][i + 1] += Ai[r][i] * dthetalist[i];
+        }
+        // Vdi[:, i+1] = AdTi[i] * Vdi[:,i] + Ai[:,i] * ddthetalist[i] + ad(Vi[:,i+1]) * Ai[:,i] * dthetalist[i]
+        const adVi = ad(Vi.map(row => row[i + 1]));
+        for (let r = 0; r < 6; r++) {
+            // AdTi[i] * Vdi[:,i]
+            let tmp = 0;
+            for (let c = 0; c < 6; c++) {
+                tmp += AdT[r][c] * Vdi[c][i];
+            }
+            // ad(Vi[:,i+1]) * Ai[:,i]
+            let tmp2 = 0;
+            for (let c = 0; c < 6; c++) {
+                tmp2 += adVi[r][c] * Ai[c][i];
+            }
+            Vdi[r][i + 1] = tmp + Ai[r][i] * ddthetalist[i] + tmp2 * dthetalist[i];
+        }
+    }
+
+    // 反向递推
+    for (let i = n - 1; i >= 0; i--) {
+        // Fi = AdTi[i+1]^T * Fi + Glist[i] * Vdi[:,i+1] - ad(Vi[:,i+1])^T * Glist[i] * Vi[:,i+1]
+        // 1. AdTi[i+1]^T * Fi
+        let Ftmp = Array(6).fill(0);
+        for (let r = 0; r < 6; r++)
+            for (let c = 0; c < 6; c++)
+                Ftmp[r] += AdTi[i + 1][c][r] * Fi[c];
+        // 2. Glist[i] * Vdi[:,i+1]
+        let G_Vdi = Array(6).fill(0);
+        for (let r = 0; r < 6; r++)
+            for (let c = 0; c < 6; c++)
+                G_Vdi[r] += Glist[i][r][c] * Vdi[c][i + 1];
+        // 3. ad(Vi[:,i+1])^T * Glist[i] * Vi[:,i+1]
+        let G_Vi = Array(6).fill(0);
+        for (let r = 0; r < 6; r++)
+            for (let c = 0; c < 6; c++)
+                G_Vi[r] += Glist[i][r][c] * Vi[c][i + 1];
+        const adViT = ad(Vi.map(row => row[i + 1])).map(row => row.slice());
+        // 转置
+        for (let r = 0; r < 6; r++)
+            for (let c = r + 1; c < 6; c++) {
+                const tmp = adViT[r][c];
+                adViT[r][c] = adViT[c][r];
+                adViT[c][r] = tmp;
+            }
+        let adViT_GVi = Array(6).fill(0);
+        for (let r = 0; r < 6; r++)
+            for (let c = 0; c < 6; c++)
+                adViT_GVi[r] += adViT[r][c] * G_Vi[c];
+        // Fi = Ftmp + G_Vdi - adViT_GVi
+        Fi = Ftmp.map((val, idx) => val + G_Vdi[idx] - adViT_GVi[idx]);
+        // taulist[i] = Fi^T * Ai[:,i]
+        taulist[i] = Fi.reduce((sum, val, idx) => sum + val * Ai[idx][i], 0);
+    }
+    return taulist;
+}
+
+
+/**
+ * Computes the mass matrix of an open chain robot based on the given configuration
+ * @param {Array<number>} thetalist A list of joint variables
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                  of a matrix with axes as the columns
+ * @returns {Array<Array<number>>} The numerical inertia matrix M(thetalist) of an n-joint serial
+             chain at the given configuration thetalist
+ * 
+ * This function calls InverseDynamics n times, each time passing a ddthetalist vector with a single element equal to one and all other
+    inputs set to zero.
+    Each call of InverseDynamics generates a single column, and these columns are assembled to create the inertia matrix.
+
+    Example Input (3 Link Robot in the function InverseDynamics):
+        const M = mr.MassMatrix(thetalist, Mlist, Glist, Slist);
+
+        console.log("MassMatrix:");
+        console.log(M);
+
+        Output:
+        [[ 2.25433380e+01, -3.07146754e-01, -7.18426391e-03]
+        [-3.07146754e-01,  1.96850717e+00,  4.32157368e-01]
+        [-7.18426391e-03,  4.32157368e-01,  1.91630858e-01]]
+ */
+function MassMatrix(thetalist, Mlist, Glist, Slist) {
+    const n = thetalist.length;
+    let M = Array.from({ length: n }, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+        let ddthetalist = Array(n).fill(0);
+        ddthetalist[i] = 1;
+        const col = InverseDynamics(
+            thetalist,
+            Array(n).fill(0),         // dthetalist = 0
+            ddthetalist,
+            [0, 0, 0],                // g = 0
+            [0, 0, 0, 0, 0, 0],       // Ftip = 0
+            Mlist,
+            Glist,
+            Slist
+        );
+        for (let j = 0; j < n; j++) {
+            M[j][i] = col[j];
+        }
+    }
+    return M;
+}
+
+/**
+ * Computes the Coriolis and centripetal terms in the inverse dynamics of an open chain robot（Coriolis force）
+ * @param {Array<number>} thetalist A list of joint variables,
+ * @param {Array<number>} dthetalist A list of joint rates,
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position,
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links,
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                  of a matrix with axes as the columns.
+ * @returns {Array<number>} The vector c(thetalist,dthetalist) of Coriolis and centripetal
+             terms for a given thetalist and dthetalist.
+ * 
+ *  This function calls InverseDynamics with g = 0, Ftip = 0, and ddthetalist = 0.
+ *  
+ *  Example Input (Same 3 Link Robot in the function InverseDynamics):
+ *   const thetalist = [0.1, 0.1, 0.1];
+     const dthetalist = [0.1, 0.2, 0.3]; 
+     const VQF = mr.VelQuadraticForces(thetalist, dthetalist, Mlist, Glist, Slist);
+     console.log("VelQuadraticForces:");
+     console.log(VQF);
+     // output：[0.26453118, -0.05505157, -0.00689132]
+ */
+function VelQuadraticForces(thetalist, dthetalist, Mlist, Glist, Slist) {
+    return InverseDynamics(
+        thetalist,
+        dthetalist,
+        Array(thetalist.length).fill(0), // ddthetalist = 0
+        [0, 0, 0],                       // g = 0
+        [0, 0, 0, 0, 0, 0],              // Ftip = 0
+        Mlist,
+        Glist,
+        Slist
+    );
+}
+
+
+/**
+ * Computes the joint forces/torques an open chain robot requires to overcome gravity at its configuration
+ * @param {Array<number>} thetalist A list of joint variables
+ * @param {Array<number>} g 3-vector for gravitational acceleration
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                                       of a matrix with axes as the columns
+ * @returns {Array<number>} grav: The joint forces/torques required to overcome gravity at thetalist
+ * 
+ * This function calls InverseDynamics with Ftip = 0, dthetalist = 0, and ddthetalist = 0.
+ * 
+ * Example Input (Same 3 Link Robot in the function InverseDynamics):
+     const thetalist = [0.1, 0.1, 0.1];
+     const g = [0, 0, -9.8]; 
+     const GF = mr.GravityForces(thetalist, g, Mlist, Glist, Slist);
+     console.log("GravityForces:");
+     console.log(GF);
+     // output：[28.40331262, -37.64094817, -5.4415892]
+ */
+function GravityForces(thetalist, g, Mlist, Glist, Slist) {
+    const n = thetalist.length;
+    return InverseDynamics(
+        thetalist,
+        Array(n).fill(0),           // dthetalist = 0
+        Array(n).fill(0),           // ddthetalist = 0
+        g,
+        [0, 0, 0, 0, 0, 0],         // Ftip = 0
+        Mlist,
+        Glist,
+        Slist
+    );
+}
+
+/**
+ * Computes the joint forces/torques an open chain robot requires only to create the end-effector force Ftip
+ * @param {Array<number>} thetalist A list of joint variables
+ * @param {Array<number>} Ftip Spatial force applied by the end-effector expressed in frame {n+1}
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                                       of a matrix with axes as the columns
+ * @returns {Array<number>} The joint forces and torques required only to create the end-effector force Ftip
+ * 
+ * This function calls InverseDynamics with g = 0, dthetalist = 0, and ddthetalist = 0.
+ * Example Input (Same 3 Link Robot in the function InverseDynamics):
+     const thetalist = [0.1, 0.1, 0.1];
+     const Ftip = np.array([1, 1, 1, 1, 1, 1]); 
+     const EF = mr.EndEffectorForces(thetalist, Ftip, Mlist, Glist, Slist);
+     console.log("EndEffectorForces:");
+     console.log(EF);
+     // output：[1.40954608, 1.85771497, 1.392409]
+ */
+function EndEffectorForces(thetalist, Ftip, Mlist, Glist, Slist) {
+    const n = thetalist.length;
+    return InverseDynamics(
+        thetalist,
+        Array(n).fill(0),           // dthetalist = 0
+        Array(n).fill(0),           // ddthetalist = 0
+        [0, 0, 0],                  // g = 0
+        Ftip,
+        Mlist,
+        Glist,
+        Slist
+    );
+}
+
+/**
+ * Computes forward dynamics in the space frame for an open chain robot
+ * @param {Array<number>} thetalist A list of joint variables
+ * @param {Array<number>} dthetalist A list of joint rates
+ * @param {Array<number>} taulist An n-vector of joint forces/torques
+ * @param {Array<number>} g Gravity vector g
+ * @param {Array<number>} Ftip Spatial force applied by the end-effector expressed in frame {n+1}
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                                       of a matrix with axes as the columns
+ * @returns {Array<number>} ddthetalist: The resulting joint accelerations
+ * 
+ *  This function computes ddthetalist by solving:
+ * 
+    Mlist(thetalist) * ddthetalist = taulist - c(thetalist,dthetalist) - g(thetalist) - Jtr(thetalist) * Ftip
+ * 
+    Example Input (Same 3 Link Robot in the function InverseDynamics):
+        const thetalist = np.array([0.1, 0.1, 0.1])
+        const dthetalist = np.array([0.1, 0.2, 0.3])
+        const taulist = np.array([0.5, 0.6, 0.7])
+        const g = np.array([0, 0, -9.8])
+        const Ftip = np.array([1, 1, 1, 1, 1, 1])
+
+        ddthetalist = mr.ForwardDynamics(
+            thetalist, dthetalist, taulist, g, Ftip, Mlist, Glist, Slist
+        );
+        console.log("ForwardDynamics Output:");
+        console.log(ddthetalist);
+
+ * Output: [-0.97392907, 25.58466784, -32.91499212]
+ */
+function ForwardDynamics(thetalist, dthetalist, taulist, g, Ftip, Mlist, Glist, Slist) {
+    // 1. Mass matrix
+    const M = MassMatrix(thetalist, Mlist, Glist, Slist);
+    // 2. Coriolis and centripetal terms
+    const c = VelQuadraticForces(thetalist, dthetalist, Mlist, Glist, Slist);
+    // 3. Gravitational forces
+    const grav = GravityForces(thetalist, g, Mlist, Glist, Slist);
+    // 4. End-effector forces
+    const JtrFtip = EndEffectorForces(thetalist, Ftip, Mlist, Glist, Slist);
+    // 5. Computes ddthetalist by solving using numeric.solve
+    // taulist = M * ddthetalist + c + grav + JtrFtip
+    const n = thetalist.length;
+    let rhs = Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+        rhs[i] = taulist[i] - c[i] - grav[i] - JtrFtip[i];
+    }
+    const ddthetalist = numeric.solve(M, rhs);
+    return ddthetalist;
+}
 
 
 /*** CHAPTER 9: TRAJECTORY GENERATION ***/ 
@@ -1763,6 +2178,70 @@ function CartesianTrajectory(Xstart, Xend, Tf, N, method) {
     return traj;
 }
 
+/* Robot Control */
+/**
+ * Simulates a PID control for a robot arm
+ * @param {Array<number>} q0 initial joint angles
+ * @param {Array<number>} dq0 initial joint velocities
+ * @param {Array<number>} q_ref target joint angles
+ * @param {Array<number>} dq_ref target joint velocities
+ * @param {number} dt time step for the simulation
+ * @param {number} steps number of simulation steps
+ * @param {Array<Array<Array<number>>>} Mlist List of link frames i relative to i-1 at the home position
+ * @param {Array<Array<Array<number>>>} Glist Spatial inertia matrices Gi of the links
+ * @param {Array<Array<number>>} Slist Screw axes Si of the joints in a space frame, in the format
+                                       of a matrix with axes as the columns
+ * @param {Array<number>} Kplist gain for proportional control
+ * @param {Array<number>} Kilist gain for integral control
+ * @param {Array<number>} Kdlist gain for derivative control
+ * @returns {[Array<Array<number>>, Array<Array<number>>]} [q_hist, dq_hist]
+ */
+function simulate_PIDcontrol(q0, dq0, q_ref, dq_ref, dt, steps, Mlist, Glist, Slist, Kplist, Kilist, Kdlist) {
+    const g = [0, 0, -9.8];
+    const Ftip = [0, 0, 0, 0, 0, 0];
+    const pos_threshold = 0.002;
+    const vel_threshold = 0.002;
+
+    let q = q0.slice();
+    let dq = dq0.slice();
+    let q_hist = [q.slice()];
+    let dq_hist = [dq.slice()];
+    let integral = Array(q.length).fill(0);
+
+    function pid_control(q, dq, q_ref, dq_ref, dt, Kp, Ki, Kd, integral) {
+        // 逐元素计算
+        let u = [];
+        for (let i = 0; i < q.length; i++) {
+            integral[i] += (q_ref[i] - q[i]) * dt;
+            u[i] = Kp[i] * (q_ref[i] - q[i])
+                 + Ki[i] * integral[i]
+                 + Kd[i] * (dq_ref[i] - dq[i]);
+        }
+        return u;
+    }
+
+    for (let i = 0; i < steps; i++) {
+        const tau_pid = pid_control(q, dq, q_ref, dq_ref, dt, Kplist, Kilist, Kdlist, integral);
+        const tau = tau_pid.map((val, idx) => val + GravityForces(q, g, Mlist, Glist, Slist)[idx]);
+        const ddq = ForwardDynamics(q, dq, tau, g, Ftip, Mlist, Glist, Slist);
+
+        // dq += ddq * dt, q += dq * dt
+        dq = dq.map((v, idx) => v + ddq[idx] * dt);
+        q = q.map((v, idx) => v + dq[idx] * dt);
+
+        q_hist.push(q.slice());
+        dq_hist.push(dq.slice());
+
+        // 判断收敛
+        const pos_err = Math.sqrt(q.reduce((sum, v, idx) => sum + Math.pow(v - q_ref[idx], 2), 0));
+        const vel_err = Math.sqrt(dq.reduce((sum, v) => sum + v * v, 0));
+        if (pos_err < pos_threshold && vel_err < vel_threshold) {
+            break;
+        }
+    }
+    return [q_hist, dq_hist];
+}
+
 
 // Export the functions as a module
 module.exports = {
@@ -1811,16 +2290,31 @@ module.exports = {
     /* Chapter 4: Forward Kinematics */
     FKinBody,
     FKinSpace,
+
     // Chapter 5: Velocity Kinematics and Statics
     JacobianBody,
     JacobianSpace,
+
     // Chapter 6: Inverse Kinematics
     IKinBody,
     IKinSpace,
+
+    // Chapter 8: Dynamics of Open Chains
+    ad,
+    InverseDynamics,
+    MassMatrix,
+    VelQuadraticForces,
+    GravityForces,
+    EndEffectorForces,
+    ForwardDynamics,
+
     // Chapter 9: Trajectory Generation
     CubicTimeScaling,
     QuinticTimeScaling,
     JointTrajectory,
     ScrewTrajectory,
-    CartesianTrajectory
+    CartesianTrajectory,
+
+    // Robot Control
+    simulate_PIDcontrol
 };

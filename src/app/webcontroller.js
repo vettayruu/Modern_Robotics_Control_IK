@@ -146,7 +146,7 @@ return (
                       newTheta[idx] = Number.parseFloat(e.target.value || 0);
                       props.setThetaBody(newTheta);
                     }}
-                    step={0.01}
+                    step={0.5}
                     min={jointLimits[idx].min}
                     max={jointLimits[idx].max}
                   />
