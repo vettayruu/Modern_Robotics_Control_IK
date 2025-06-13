@@ -199,7 +199,7 @@ return (
                     props.setPositionEE(newPos);
                     props.onTargetChange(newPos, props.euler_ee);
                   }}
-                  step = {0.001}                   
+                  step = {0.01}                   
                 />
               </div>
             ))}
@@ -224,7 +224,7 @@ return (
                         props.setEuler(newEuler);
                         props.onTargetChange(props.position_ee, newEuler);
                   }}
-                  step = {0.005}
+                  step = {0.02}
                 />
               </div>
             ))}

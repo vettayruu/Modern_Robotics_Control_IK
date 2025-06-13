@@ -1,8 +1,21 @@
 import React from 'react';
 import Assets from './Assets';
 import { Select_Robot } from './Model';
-import Line from './Line';
+// import Line from './Line';
 import Controller from './webcontroller.js';
+
+const Line = (props) => {
+  const { pos1={x:0,y:0,z:0}, pos2={x:0,y:0,z:0}, color="magenta", opa=1, visible=false, ...otherprops } = props;
+
+  const line_para = `start: ${pos1.x} ${pos1.y} ${pos1.z}; end: ${pos2.x} ${pos2.y} ${pos2.z}; color: ${color}; opacity: ${opa};`
+
+  return <a-entity
+      {...otherprops}
+      line={line_para}
+      position={`0 0 0`}
+      visible={`${visible}`}
+  ></a-entity>
+}
 
 export default function RobotScene(props) {
   const {
@@ -59,7 +72,7 @@ export default function RobotScene(props) {
           
         </a-entity>
 
-        {/* 世界坐标系参考轴 */}
+        {/* World Space */}
         <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0,z:-0.2}} color="red" visible={true} /> 
         <Line pos1={{x:0,y:0,z:0}} pos2={{x:-0.2,y:0,z:0}} color="green" visible={true} />   
         <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0.2,z:0}}  color="blue" visible={true} /> 

@@ -2,24 +2,21 @@
 import 'aframe'
 import * as React from 'react'
 import RobotScene from './RobotScene';
+import registerAframeComponents from './registerAframeComponents'; 
 
-import registerAframeComponents from './registerAframeComponents'; // A-Frame 组件注册
-
-const THREE = window.AFRAME.THREE; // これで　AFRAME と　THREEを同時に使える
+const THREE = window.AFRAME.THREE;
 // import 'aframe-troika-text';
 
 import useMqtt from './useMqtt';
 import { connectMQTT, mqttclient,idtopic,subscribeMQTT, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 
-const order = 'ZYX'; // 欧拉角顺序
+const order = 'ZYX'; 
 
 const mr = require('../modern_robotics/modern_robotics_core.js');
 const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
-// 创建 piper_agilex 机器人运动学对象
-const rk = new RobotDynamcis("piper_agilex");
 
-// 获取 M 和 Slist
+const rk = new RobotDynamcis("piper_agilex");
 const M = rk.get_M();
 const Mlist = rk.get_Mlist();
 const Glist = rk.get_Glist();
@@ -29,14 +26,10 @@ const Kilist = rk.get_Kilist();
 const Kdlist = rk.get_Kdlist(); 
 const jointLimits = rk.jointLimits;
 
-console.log("Mlist:", Mlist);
-console.log("Glist:", Glist);
-
-
 // 全局常量与变量定义
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/"+idtopic;
-const MQTT_CTRL_TOPIC =        "control/"+idtopic; // 自分のIDに制御を送信
+const MQTT_CTRL_TOPIC = "control/"+idtopic; // 自分のIDに制御を送信
 const MQTT_ROBOT_STATE_TOPIC = "robot/"; // Viwer のばあい
 
 // React组件主函数
@@ -166,9 +159,8 @@ export default function DynamicHome(props) {
   const onAnimationMQTT = (time) =>{
     const robot_state_json = JSON.stringify({
       time: time,
-      joints: rotateRef.current, // 当前各关节角度
+      joints: theta_body.current, // 当前各关节角度
       grip: gripRef.current      // 当前夹爪状态
-      // trigger: [gripRef.current, buttonaRef.current, buttonbRef.current, gripValueRef.current]
     });
     publishMQTT(MQTT_ROBOT_STATE_TOPIC+idtopic , robot_state_json); // 发布到机器人状态主题
     window.requestAnimationFrame(onAnimationMQTT); // 持续递归调用，形成定时推送
@@ -196,7 +188,7 @@ export default function DynamicHome(props) {
       // 组装并发送控制指令
       const ctl_json = JSON.stringify({
         time: time,
-        joints: rotateRef.current,
+        joints: theta_body.current,
         trigger: [gripRef.current, buttonaRef.current, buttonbRef.current, gripValueRef.current]
       });
       publishMQTT(MQTT_CTRL_TOPIC, ctl_json);
@@ -214,7 +206,6 @@ export default function DynamicHome(props) {
   const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 
   // Foward Kinematics solution
-  // const T0 = mr.FKinSpace(M, Slist, theta_body);
   const T0 = mr.FKinBody(M, Blist, theta_body);
   const [R0, p0] = mr.TransToRp(T0);
   const Euler_order = 'ZYX'; // Euler angle order
@@ -224,7 +215,6 @@ export default function DynamicHome(props) {
   const [position_ee, setPositionEE] = React.useState(position_ee_initial);
   const position_ee_Three = mr.worlr2three(position_ee);
 
-  /* Effector orientation (Body-Fixed: ZYX order, Space-Fixed: XYZ order) */
   const euler_ee_initial = mr.RotMatToEuler(R0, Euler_order); 
   const [euler_ee, setEuler] = React.useState(euler_ee_initial);
   const euler_ee_Three = mr.worlr2three(euler_ee);
@@ -232,22 +222,12 @@ export default function DynamicHome(props) {
   // const quaternion_ee_initial = mr.RotMatToQuaternion(R0);
   // const [quaternion_ee, setQuaternionEE] = React.useState(quaternion_ee_initial);
 
-  // // Twist of end effector (angular velocity and angle)
-  // const [omghat0, theta0] = mr.RotMatToAxisAngle(R0); // end effector twist
-  // const twist_ee_initial = [omghat0, theta0]
-  // const [twist_ee, setTwistEE] = React.useState(twist_ee_initial);
-
   // Update end effector position and orientation (for webcontroller)
   React.useEffect(() => {
-    // const T = mr.FKinSpace(M, Slist, theta_body);
     const T = mr.FKinBody(M, Blist, theta_body);
-    // console.log("current T:", T);
-
     const [R, p] = mr.TransToRp(T);
-
     setPositionEE(p);
     setEuler(mr.RotMatToEuler(R, Euler_order)); // Update to ZYX Euler angles
-    // setTwistEE(mr.RotMatToAxisAngle(R));
     }, [theta_body]);
   
 
@@ -255,18 +235,10 @@ export default function DynamicHome(props) {
   // Theta guess for Newton's method in inverse kinematics
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
-  /** Euler Control **/
-  function EulerhandleTargetChange(newPos, newEuler) {
-    /* Space-fixed IK, use Slist */
-    // const T_sd = mr.RpToTrans(mr.EulerXYZToRotMat(newEuler), newPos);
-    
-
-    /* Body-fixed IK, use Blist */
+  /** Kinamatics Control **/
+  function KinamaticsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, order), newPos);
-    // const [thetalist_sol, ik_success] = mr.IKinSpace(Slist, M, T_sd, theta_body_guess, 1e-4, 1e-5);
     const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
-
-    console.log("T_sd:", T_sd);
 
     if (ik_success) {
       const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
@@ -279,13 +251,8 @@ export default function DynamicHome(props) {
     }
   }
 
-  const targetReachedRef = React.useRef(true);
-  const animatingRef = React.useRef(false);
   /** Dynamics Control **/
-  function DynamicsTargetChange(newPos, newEuler) {
-    if (animatingRef.current) return; // 动画未结束时不触发新的仿真
-    animatingRef.current = true;
-    /* Body-fixed IK, use Blist */
+  function DynamicsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, order), newPos);
     const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
 
@@ -296,18 +263,13 @@ export default function DynamicHome(props) {
     const dt = 0.01;
     const steps = 200;
 
-    const q0 = theta_body_guess.slice();
+    const q0 = theta_body.slice();
     const dq0 = Array(q0.length).fill(0);
 
     const q_ref = thetalist_sol_limited.slice();
-    const dq_ref = Array(q_ref.length).fill(0);
+    const dq_ref = Array(q0.length).fill(0);
     
     const [q_hist, dq_hist] = mr.simulate_PIDcontrol(q0, dq0, q_ref, dq_ref, dt, steps, Mlist, Glist, Slist, Kplist, Kilist, Kdlist)
-    
-    // if (ik_success) {
-    //   setThetaBody(q_hist[q_hist.length - 1]);
-    //   setThetaBodyGuess(q_hist[q_hist.length - 1]);
-    // }
 
     if (ik_success) {
       setTimeout(() => {
@@ -315,22 +277,12 @@ export default function DynamicHome(props) {
         function animate() {
           if (idx < q_hist.length) {
             setThetaBody(q_hist[idx]);
-            setThetaBodyGuess(q_hist[idx]);
-            idx += 1; // 可调节步进
+            idx += 1; 
             setTimeout(animate, 1);
-          } else {
-          // 动画播放结束，判断是否到达目标
-          const q_last = q_hist[q_hist.length - 1];
-          const q_err = Math.sqrt(q_last.reduce((sum, v, i) => sum + Math.pow(v - q_ref[i], 2), 0));
-          if (q_err < 0.01) { // 阈值可调
-            targetReachedRef.current = true; // 允许更新控制器参考
-            animatingRef.current = false;
-          } else {
-            targetReachedRef.current = false;
-          }
-        }
+          } 
       }
       animate();
+      setThetaBodyGuess(q_hist[q_hist.length - 1]);
       }, 0);
     } 
 
@@ -343,8 +295,8 @@ export default function DynamicHome(props) {
   const lastPosRef = React.useRef(controller_object.position.clone());
   const lastEulerRef = React.useRef(controller_object.rotation.clone());
   // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
-  const PosstepSize = 0.65; // 控制器移动步长
-  const EulerstepSize = 0.45; // 控制器移动步长
+  const PosstepSize = 0.65; 
+  const EulerstepSize = 0.45; 
 
   /* Euler angle control */
   React.useEffect(() => {
@@ -357,7 +309,6 @@ export default function DynamicHome(props) {
       const deltaArr_Three = [deltaPos.x, deltaPos.y, deltaPos.z];
       const deltaArr_World = mr.three2world(deltaArr_Three);
 
-      // 姿态差分
       const deltaEuler = {
         x: controller_object.rotation.x - lastEulerRef.current.x,
         y: controller_object.rotation.y - lastEulerRef.current.y,
@@ -366,44 +317,30 @@ export default function DynamicHome(props) {
       const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z];
       const deltaEuler_World = mr.three2world(deltaEuler_Three);
 
-      // 1. 获取当前末端位置和姿态
+      // 1. Get current position and orientation
       const currentPos = [...position_ee];
       const currentEuler = [...euler_ee];
 
-      // 2. 计算新的目标位置和姿态
+      // 2. Calculate new position and orientation
       const newPos = [
         currentPos[0] + PosstepSize * deltaArr_World[0],
         currentPos[1] + PosstepSize * deltaArr_World[1],
         currentPos[2] + PosstepSize * deltaArr_World[2]
       ];
-      // ZYX order: [roll, pitch, yaw] 
+      // ZYX order: [yaw, pitch, roll] 
       const newEuler = [
         currentEuler[0] + EulerstepSize * deltaEuler_World[2],
         currentEuler[1] - EulerstepSize * deltaEuler_World[1],
         currentEuler[2] - EulerstepSize * deltaEuler_World[0]
       ];
 
-      // joint6 控制：用 VR 控制器的 z 轴旋转直接控制 joint6
-      // 你可以用 rotation.z，也可以用 position.z 的变化
-      // const joint6_delta = controller_object.rotation.z - lastEulerRef.current.z;
-      // const joint6_new = theta_body[5] + joint6_delta; // 或加步长缩放
-
-      // // 关节限位
-      // const joint6_limited = Math.max(jointLimits[5].min, Math.min(jointLimits[5].max, joint6_new));
-
-      // // 更新关节角度
-      // const newThetaBody = [...theta_body];
-      // newThetaBody[5] = joint6_limited;
-      // setThetaBody(newThetaBody);
-      // setThetaBodyGuess(newThetaBody);
-
-      // // 3. 调用逆解
-      EulerhandleTargetChange(newPos, newEuler);
-      // DynamicsTargetChange(newPos, newEuler);
+      // 3. Contorl Method
+      KinamaticsControl(newPos, newEuler);
+      // DynamicsControl(newPos, newEuler);
       
 
     }
-    // 4. 更新上一帧位置
+    // 4. Update last position and orientation
     lastPosRef.current.copy(controller_object.position);
     lastEulerRef.current.copy(controller_object.rotation);
   }, [
@@ -430,9 +367,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // twist_ee, setTwistEE
-    // onTargetChange: EulerhandleTargetChange,
-    onTargetChange: DynamicsTargetChange,
+    // onTargetChange: KinamaticsControl,
+    onTargetChange: DynamicsControl
   }), [
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
@@ -444,9 +380,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // twist_ee, setTwistEE
-    // EulerhandleTargetChange,
-    DynamicsTargetChange
+    // KinamaticsControl,
+    DynamicsControl
   ]);
 
   // VRController Inputs (Aframe Components)
@@ -476,7 +411,7 @@ export default function DynamicHome(props) {
   // Robot Secene Render
   return (
     <RobotScene
-      rendered={rendered} // render trigger
+      rendered={rendered}
       target_error={target_error}
       box_vis={box_vis}
       cursor_vis={cursor_vis}
