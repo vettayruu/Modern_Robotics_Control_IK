@@ -4,8 +4,8 @@ Source code: https://github.com/NxRLab/ModernRobotics
 
 The kinematics parts are changed to javascript.
 
-To run the code:
+2025/06/12 Dynamics control is added into the controller, but the VR still can not work with dynamics control. 
 
-cd ./src
+To run the code:
 
 npm run dev-https
