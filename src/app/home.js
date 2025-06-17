@@ -9,6 +9,7 @@ const THREE = window.AFRAME.THREE;
 
 import useMqtt from './useMqtt';
 import { connectMQTT, mqttclient,idtopic,subscribeMQTT, publishMQTT, codeType } from '../lib/MetaworkMQTT'
+import { Coming_Soon } from 'next/font/google';
 
 const order = 'ZYX'; 
 
@@ -207,6 +208,10 @@ export default function DynamicHome(props) {
   const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
   const [theta_body, setThetaBody] = React.useState(theta_body_initial);
 
+  const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
+  const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
+  
+
   const theta_tool_inital = 0;
   const [theta_tool, setThetaTool] = React.useState(theta_tool_inital);
   // Theta guess for Newton's method in inverse kinematics
@@ -265,7 +270,9 @@ export default function DynamicHome(props) {
     }, [theta_body]);
   
 
-  /*** Inverse Kinematics Part ***/
+  /**
+   *  Control Methods
+   * /
   /** Kinamatics Control **/
   function KinamaticsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
@@ -310,119 +317,37 @@ export default function DynamicHome(props) {
     }
   }
 
-  /** Model Predictive Control **/
-  // const [vrTrajectory, setVrTrajectory] = React.useState([]);
+  /** Virtual Force control
+   * Using VR controller's virtal force as input to control robot end effector
+  */
+  function VirtualForceControl(Ftip, dt) {
+    const g = [0, 0, -9.81]; 
 
-  // // 在 VR 控制器 useEffect 里采集轨迹
-  // React.useEffect(() => {
-  //   if (rendered && vrModeRef.current && trigger_on) {
-  //     const now = performance.now();
-  //     const pos = [controller_object.position.x, controller_object.position.y, controller_object.position.z];
-  //     const euler = [controller_object.rotation.x, controller_object.rotation.y, controller_object.rotation.z];
-  //     setVrTrajectory(traj => [...traj, { pos, euler, time: now }].slice(-N)); // N为轨迹长度
-  //   }
-  // }, [
-  //   controller_object.position.x,
-  //   controller_object.position.y,
-  //   controller_object.position.z,
-  //   controller_object.rotation.x,
-  //   controller_object.rotation.y,
-  //   controller_object.rotation.z,
-  //   rendered,
-  //   trigger_on
-  // ]);
+    const q = theta_body.slice();
+    const dq = dtheta_body.slice();
 
-  // React.useEffect(() => {
-  // const interval = setInterval(() => {
-  //   if (vrTrajectory.length > 1) {
-  //       // 取当前轨迹，传给MPC
-  //       const refTraj = vrTrajectory.slice();
-  //       const q_hist = runMPC(refTraj, theta_body, ...); // 你需要实现runMPC
-  //       setQHistQueue(queue => [...queue, q_hist]);
-  //     }
-  //   }, 100); // 100ms预测一次
-  //   return () => clearInterval(interval);
-  // }, [vrTrajectory, theta_body]);
+    // Gravity compensation
+    const tau_gravity = mr.GravityForces(q, g, Mlist, Glist, Slist)
 
-  // function runMPC(refTraj, q0, ...) {
-  //   // refTraj: [{pos, euler, time}, ...]
-  //   // q0: 当前关节角
-  //   // ...: 机器人动力学参数
+    // Forward dynamics simulation, return joint accelerations
+    const ddq = mr.ForwardDynamics(q, dq, tau_gravity, g, Ftip, Mlist, Glist, Slist)
 
-  //   // 1. 轨迹插值/重采样，得到未来N步的期望末端轨迹
-  //   // 2. 用优化方法（如QP、iLQR等）预测未来N步的关节轨迹
-  //   // 3. 返回一段q_hist（二维数组，每行为一帧的关节角）
+    //Euler integration to update joint angles and velocities
+    const dq_next = dq.map((v, i) => v + ddq[i] * dt);
+    const q_next = q.map((v, i) => v + dq_next[i] * dt);
 
-  //   // 这里只给出伪代码，具体实现需用数值优化库
-  //   return q_hist;
-  // }
+    // Update joint and joint velocities
+    setThetaBody(q_next);
+    setdThetaBody(dq_next);
+  }
 
-/* VR Controller State */
-const lastPosRef = React.useRef(controller_object.position.clone());
-const lastEulerRef = React.useRef(controller_object.rotation.clone());
-// const lastQuatRef = React.useRef(controller_object.quaternion.clone());
-const Pos_scale = 1; 
-const Euler_scale = 1;
+  /* VR Controller Simulation */
+  const lastPosRef = React.useRef(controller_object.position.clone());
+  const lastEulerRef = React.useRef(controller_object.rotation.clone());
+  // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
+  const Pos_scale = 0.5; 
+  const Euler_scale = 0.5;
 
-// /* VR input */
-// // 6维阻抗参数（可根据实际调节）
-// const Kp_VR = [200, 200, 200, 50, 50, 50]; // 位置/姿态弹簧系数
-// const Kd_VR = [60, 60, 60, 10, 10, 10];    // 位置/姿态阻尼系数
-// const M_VR = [1, 1, 1, 0.5, 0.5, 0.5];     // 虚拟质量
-
-// // 状态变量（平滑后的末端状态）
-// const x_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]); // [x, y, z, roll, pitch, yaw]
-// const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
-// React.useEffect(() => {
-//   if (!rendered || !vrModeRef.current || !trigger_on) return;
-//   // 1. 获取原始控制器输入
-//   const x_raw = [
-//     controller_object.position.x,
-//     controller_object.position.y,
-//     controller_object.position.z,
-//     controller_object.rotation.x,
-//     controller_object.rotation.y,
-//     controller_object.rotation.z
-//   ];
-
-//   // 2. 获取上次状态
-//   let x = x_imp_ref.current.slice();
-//   let v = v_imp_ref.current.slice();
-
-//   // 3. 计算每个自由度的虚拟力、加速度、速度、位置
-//   const dt = 16.5 / 1000; // 或用实际dt
-//   let F = [], a = [], x_new = [], v_new = [];
-//   for (let i = 0; i < 6; i++) {
-//     F[i] = -Kp_VR[i] * (x[i] - x_raw[i]) - Kd_VR[i] * v[i];
-//     a[i] = F[i] / M_VR[i];
-//     v_new[i] = v[i] + a[i] * dt;
-//     x_new[i] = x[i] + v_new[i] * dt;
-//   }
-
-//   // 4. 更新状态
-//   x_imp_ref.current = x_new;
-//   v_imp_ref.current = v_new;
-
-//   // 5. 用阻抗后的x_new, euler_new作为末端目标
-//   const newPos = x_new.slice(0, 3);
-//   const newEuler = x_new.slice(3, 6);
-
-//   // 6. 控制机器人
-//   KinamaticsControl(newPos, newEuler);
-//   // DynamicsControl(newPos, newEuler);
-
-// }, [
-//   controller_object.position.x,
-//   controller_object.position.y,
-//   controller_object.position.z,
-//   controller_object.rotation.x,
-//   controller_object.rotation.y,
-//   controller_object.rotation.z,
-//   rendered,
-//   trigger_on
-// ]);
-
-  /* Euler angle control */
   const lastVRInputTimeRef = React.useRef(performance.now());
   const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
   React.useEffect(() => {
@@ -432,6 +357,10 @@ const Euler_scale = 1;
     lastVRInputTimeRef.current = now;
     console.log('VR input period(ms):', dt);
 
+    if (!trigger_on) {
+      setdThetaBody([0, 0, 0, 0, 0, 0]);
+    }
+
     if (rendered && vrModeRef.current && trigger_on) {
       const deltaPos = {
         x: controller_object.position.x - lastPosRef.current.x,
@@ -439,19 +368,48 @@ const Euler_scale = 1;
         z: controller_object.position.z - lastPosRef.current.z
       };
 
-      function angleDiff(a, b) {
-        let d = a - b;
-        while (d > Math.PI) d -= 2 * Math.PI;
-        while (d < -Math.PI) d += 2 * Math.PI;
-        return d;
+      /**
+       * Revelant Rotation 
+       * (Using abusolute Euler angles will cause drift, especeially when VR controller is far from human body)
+       */
+
+      // current and last Euler angles of VR controller
+      const currentEuler_VR = [
+        controller_object.rotation.x,
+        controller_object.rotation.y,
+        controller_object.rotation.z
+      ];
+      const lastEuler_VR = [
+        lastEulerRef.current.x,
+        lastEulerRef.current.y,
+        lastEulerRef.current.z
+      ];
+
+      // revelant rotation matrix
+      const R_current = mr.EulerToRotMat(currentEuler_VR, Euler_order);
+      const R_last = mr.EulerToRotMat(lastEuler_VR, Euler_order);
+
+      function matTranspose(R) {
+        return R[0].map((_, i) => R.map(row => row[i]));
       }
+      function matDot(A, B) {
+        return A.map((row, i) =>
+          B[0].map((_, j) =>
+            row.reduce((sum, a, k) => sum + a * B[k][j], 0)
+          )
+        );
+      }
+      const R_relative = matDot(R_current, matTranspose(R_last));
 
+      // revelant Euler angles
+      const deltaEuler_rev = mr.RotMatToEuler(R_relative, Euler_order); 
       const deltaEuler = {
-        x: angleDiff(controller_object.rotation.x, lastEulerRef.current.x),
-        y: angleDiff(controller_object.rotation.y, lastEulerRef.current.y),
-        z: angleDiff(controller_object.rotation.z, lastEulerRef.current.z)
+        x: deltaEuler_rev[0], 
+        y: deltaEuler_rev[1],
+        z: deltaEuler_rev[2]
       };
-
+      
+      // calculate the difference in position and orientation
       const deltaPos_Three = [deltaPos.x, deltaPos.y, deltaPos.z];
       const deltaPos_World = mr.three2world(deltaPos_Three);
 
@@ -460,6 +418,9 @@ const Euler_scale = 1;
 
       console.log('ΔPosition:', deltaPos, 'ΔEuler:', deltaEuler);
 
+      /* 
+      * VR Input Method
+      */
       // Speed
       // const speedPos = {
       //   x: deltaPos_World[0] / dt,
@@ -486,10 +447,10 @@ const Euler_scale = 1;
       //   z: clamp(deltaEuler_World[2] / dt, -0.002, 0.002)
       // };
 
-      // Inpedance Control
-      const Kp_VR = [80, 120, 80, 15, 12, 12]; // 位置/姿态弹簧系数
-      const Kd_VR = [18, 20, 15, 1, 1, 1];    // 位置/姿态阻尼系数
-      const M_VR = [1, 1, 1, 0.12, 0.1, 0.1];     // 虚拟质量
+      // Inpedance
+      const Kp_VR = [80, 120, 80, 15, 15, 12]; // 位置/姿态弹簧系数
+      const Kd_VR = [18, 20, 18, 1.8, 1.5, 1.2];    // 位置/姿态阻尼系数
+      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];     // 虚拟质量
 
       let v = v_imp_ref.current.slice();
 
@@ -514,6 +475,7 @@ const Euler_scale = 1;
         y: ForceEuler.y / M_VR[4],
         z: ForceEuler.z / M_VR[5]
       };
+
       const speedPos = {
         x: v[0] + accPos.x * dt,
         y: v[1] + accPos.y * dt,
@@ -525,37 +487,53 @@ const Euler_scale = 1;
         z: v[5] + accEuler.z * dt
       };
 
-      // 更新速度
-      // v_imp_ref.current = [
-      //   speedPos.x, speedPos.y, speedPos.z,
-      //   speedEuler.x, speedEuler.y, speedEuler.z
-      // ];
-
       console.log('Translation Speed:', speedPos, 'Rotation Speed:', speedEuler, 'dt(s):', dt);
 
-      // 1. Get current position and orientation
+      /**
+       * Inverse Kinematics Control
+       */
       const currentPos = [...position_ee];
       const currentEuler = [...euler_ee];
 
-      // 2. Calculate new position and orientation
       const newPos = [
-        currentPos[0] + Pos_scale * speedPos.x * dt,
-        currentPos[1] + Pos_scale * speedPos.y * dt,
-        currentPos[2] + Pos_scale * speedPos.z * dt
+        currentPos[0] + speedPos.x * dt,
+        currentPos[1] + speedPos.y * dt,
+        currentPos[2] + speedPos.z * dt
       ];
-      // ZYX order: [yaw, pitch, roll] 
       const newEuler = [
-        currentEuler[0] + Euler_scale * speedEuler.z * dt,
-        currentEuler[1] - Euler_scale * speedEuler.y * dt,
-        currentEuler[2] - Euler_scale * speedEuler.x * dt
+        currentEuler[0] + speedEuler.z * dt,
+        currentEuler[1] - speedEuler.y * dt,
+        currentEuler[2] - speedEuler.x * dt
       ];
 
-      // 3. Contorl Method
       KinamaticsControl(newPos, newEuler);
+
+      v_imp_ref.current = [
+        Pos_scale*speedPos.x, Pos_scale*speedPos.y, Pos_scale*speedPos.z,
+        Euler_scale*speedEuler.x, Euler_scale*speedEuler.y, Euler_scale*speedEuler.z
+      ];
+
+      /**
+       * Virtual Force Control
+       */
+      // const Ftip = [
+      //   ForcePos.x * Pos_scale,
+      //   ForcePos.y * Pos_scale,
+      //   ForcePos.z * Pos_scale,
+      //   ForceEuler.x * Euler_scale,
+      //   ForceEuler.y * Euler_scale,
+      //   ForceEuler.z * Euler_scale
+      // ];
+      // VirtualForceControl(Ftip, dt);
+
+
+      /**
+       * Dynamics Control
+       */
       // DynamicsControl(newPos, newEuler);
 
     }
-    // 4. Update last position and orientation
+    // Update last position and orientation
     lastPosRef.current.copy(controller_object.position);
     lastEulerRef.current.copy(controller_object.rotation);
   }, [
