@@ -13,7 +13,7 @@ export default function registerAframeComponents(options) {
     set_c_deg_x, set_c_deg_y, set_c_deg_z,
     vrModeRef,
     controller_object,
-    order,
+    Euler_order,
     props,
     onAnimationMQTT,
     onXRFrameMQTT,
@@ -34,7 +34,7 @@ export default function registerAframeComponents(options) {
     schema: { type: 'string', default: '' },
     init: function () {
       set_controller_object(this.el.object3D);
-      this.el.object3D.rotation.order = order;
+      this.el.object3D.rotation.order = Euler_order;
       this.el.addEventListener('triggerdown', () => {
         set_trigger_on(true);
       });
@@ -45,7 +45,6 @@ export default function registerAframeComponents(options) {
     update: function () {
       if (this.el.object3D !== controller_object) {
         set_controller_object(this.el.object3D);
-        console.log("Trigger update!");
       }
     }
   });

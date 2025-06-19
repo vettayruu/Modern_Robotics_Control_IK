@@ -3,34 +3,13 @@ import { connectMQTT, mqttclient, idtopic, subscribeMQTT, publishMQTT, codeType 
 
 export default function useMqtt({
   props,
-  set_input_rotate,
-  set_target_org,
-  set_wrist_rot_x,
-  set_wrist_rot_y,
-  set_wrist_rot_z,
-  set_rendered,
-  target_p16_ref,
+  thetaBodyMQTT,
   robotIDRef,
-  joint_pos,
-  round,
-  toAngle,
-  order,
-  publishMQTT,
   MQTT_REQUEST_TOPIC,
   MQTT_DEVICE_TOPIC,
-  MQTT_CTRL_TOPIC,
+  MQTT_VR_TOPIC,
   MQTT_ROBOT_STATE_TOPIC,
   receiveStateRef,
-  mqttclientRef,
-  gripRef,
-  buttonaRef,
-  buttonbRef,
-  gripValueRef,
-  set_target_error,
-  set_dsp_message,
-  setNow,
-  vrModeRef,
-  THREE
 }) {
   useEffect(() => {
     const requestRobot = (mqclient) => {
@@ -47,29 +26,81 @@ export default function useMqtt({
         MQTT_DEVICE_TOPIC
       ]);
 
+      /* VR Viewer Mode */
       if (props.viewer) {
         window.mqttClient.on('message', (topic, message) => {
-          if (topic == MQTT_DEVICE_TOPIC) {
-            let data = JSON.parse(message.toString())
-            if (data.controller != undefined) {
-              robotIDRef.current = data.devId
+          let data;
+          try {
+            data = JSON.parse(message.toString());
+          } catch (e) {
+            console.warn("MQTT error:", message.toString());
+            return;
+          }
+
+          if (topic === MQTT_DEVICE_TOPIC) {
+            if (data.devId != undefined) {
+              robotIDRef.current = data.devId;
               subscribeMQTT([
-                "control/" + data.devId
+                MQTT_VR_TOPIC + data.devId,
               ]);
             }
-          } else if (topic == "control/" + robotIDRef.current) {
-            let data = JSON.parse(message.toString())
+            return;
+          }
+
+          if (topic === MQTT_VR_TOPIC + robotIDRef.current) {
             if (data.joints != undefined) {
-              set_input_rotate(data.joints)
+              thetaBodyMQTT(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(data.joints)) {
+                console.log("Time", data.time, "useMqtt received setThetaBody:", data.joints, "from", topic);
+                return data.joints;}
+              return prev;});
             }
           }
         })
-      } else {
+
+        // const handler = (topic, message) => {
+        //   let data;
+        //   try {
+        //     data = JSON.parse(message.toString());
+        //   } catch (e) {
+        //     console.warn("MQTT error:", message.toString());
+        //     return;
+        //   }
+
+        //   if (topic === MQTT_DEVICE_TOPIC) {
+        //     if (data.devId != undefined) {
+        //       robotIDRef.current = data.devId;
+        //       subscribeMQTT([
+        //         MQTT_VR_TOPIC + data.devId,
+        //       ]);
+        //     }
+        //     return;
+        //   }
+
+        //   if (topic === MQTT_VR_TOPIC + robotIDRef.current) {
+        //     if (data.joints != undefined) {
+        //       thetaBodyMQTT(prev => {
+        //         if (JSON.stringify(prev) !== JSON.stringify(data.joints)) {
+        //           console.log("Time", data.time, "useMqtt received setThetaBody:", data.joints, "from", topic);
+        //           return data.joints;
+        //         }
+        //         return prev;
+        //       });
+        //     }
+        //   }
+        // };
+
+        // window.mqttClient.on('message', handler);
+
+        // return () => {
+        //   window.mqttClient.off('message', handler);
+        // };
+      } 
+      else {
         window.mqttClient.on('message', (topic, message) => {
           if (topic === MQTT_DEVICE_TOPIC) {
             let data = JSON.parse(message.toString())
             if (data.devId === "none") {
-              // 机器人未找到
             } else {
               robotIDRef.current = data.devId
               if (!receiveStateRef.current) {
@@ -79,41 +110,10 @@ export default function useMqtt({
               }
             }
           }
-          if (topic === MQTT_ROBOT_STATE_TOPIC + robotIDRef.current) {
-            let data = JSON.parse(message.toString())
-            const joints = data.joints
-            if (!receiveStateRef.current) {
-              if (props.monitor === undefined) {
-                mqttclient.unsubscribe(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current)
-                receiveStateRef.current = true;
-              }
-              set_input_rotate(joints)
-              window.setTimeout(() => {
-                if (target_p16_ref.current !== null) {
-                  const obj = target_p16_ref.current
-                  const p16_pos = obj.getWorldPosition(new THREE.Vector3())
-                  const p16_quat = obj.getWorldQuaternion(new THREE.Quaternion())
-                  const p16_euler = new THREE.Euler().setFromQuaternion(p16_quat, order)
-
-                  // set_target_org({ x: p16_pos.x, y: p16_pos.y, z: p16_pos.z })
-                  if (p16_pos && typeof p16_pos.x === 'number') {
-                    set_target_org({ x: p16_pos.x, y: p16_pos.y, z: p16_pos.z });
-                  }
-
-                  set_wrist_rot_x(round(toAngle(p16_euler.x)))
-                  set_wrist_rot_y(round(toAngle(p16_euler.y)))
-                  set_wrist_rot_z(round(toAngle(p16_euler.z)))
-                }
-                if (props.monitor === undefined) {
-                  publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic }))
-                }
-              }, 500);
-            }
-          }
         })
       }
     }
-
+    
     const handleBeforeUnload = () => {
       if (mqttclient != undefined) {
         publishMQTT("mgr/unregister", JSON.stringify({ devId: idtopic }));
@@ -123,5 +123,6 @@ export default function useMqtt({
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     }
+
   }, []);
 }

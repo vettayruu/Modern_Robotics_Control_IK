@@ -3,20 +3,15 @@ import 'aframe'
 import * as React from 'react'
 import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
-
-const THREE = window.AFRAME.THREE;
-// import 'aframe-troika-text';
-
 import useMqtt from './useMqtt';
 import { connectMQTT, mqttclient,idtopic,subscribeMQTT, publishMQTT, codeType } from '../lib/MetaworkMQTT'
-import { Coming_Soon } from 'next/font/google';
 
-const order = 'ZYX'; 
-
+const THREE = window.AFRAME.THREE;
 const mr = require('../modern_robotics/modern_robotics_core.js');
 const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
 
+// Load Robot Model
 const rk = new RobotDynamcis("piper_agilex");
 const M = rk.get_M();
 const Mlist = rk.get_Mlist();
@@ -28,40 +23,28 @@ const Kdlist = rk.get_Kdlist();
 const jointLimits = rk.jointLimits;
 const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 
-// 全局常量与变量定义
+// MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
-const MQTT_DEVICE_TOPIC = "dev/"+idtopic;
-const MQTT_CTRL_TOPIC = "control/"+idtopic; // 自分のIDに制御を送信
-const MQTT_ROBOT_STATE_TOPIC = "robot/"; // Viwer のばあい
+const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
+const MQTT_VR_TOPIC = "VR/"; 
+const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
-// React组件主函数
 export default function DynamicHome(props) {
-  // 当前时间戳（用于动画驱动）
   const [now, setNow] = React.useState(new Date())
-  // 是否已渲染主场景
   const [rendered,set_rendered] = React.useState(false)
-  // 机器人型号列表与当前型号
   const robotNameList = ["Model"]
   const [robotName,set_robotName] = React.useState(robotNameList[0])
-  // 辅助线、测试框可见性
-  const [cursor_vis,set_cursor_vis] = React.useState(false)
-  const [box_vis,set_box_vis] = React.useState(false)
-  // 目标点是否超出可达范围
+
   const [target_error,set_target_error] = React.useState(false)
 
-  // 当前输出的关节角度数组（用于MQTT/渲染等）
-  const rotateRef = React.useRef([0,0,0,0,0,0,0]); // 用于跨渲染帧保存关节角度
-
-  /* VR Controller State Initialize*/
   const [controller_object, set_controller_object] = React.useState(() => {
     const controller_object = new THREE.Object3D();
     return controller_object;
     });
 
   const [trigger_on,set_trigger_on] = React.useState(false)
-  const vrModeRef = React.useRef(false); // VR模式标志
+  const vrModeRef = React.useRef(false); 
 
-  // 夹爪/按钮状态
   const gripRef = React.useRef(false);
   const gripValueRef = React.useRef(0);
 
@@ -71,10 +54,10 @@ export default function DynamicHome(props) {
   const button_B_Ref = React.useRef(null);
 
 
-  const [selectedMode, setSelectedMode] = React.useState('control'); // 控制/监控模式
-  const robotIDRef = React.useRef("none"); // 当前机器人ID
+  const [selectedMode, setSelectedMode] = React.useState('control'); 
+  const robotIDRef = React.useRef("Model"); 
 
-  // 摄像机位置与朝向
+  // VR camera pose
   const [c_pos_x,set_c_pos_x] = React.useState(0.23)
   const [c_pos_y,set_c_pos_y] = React.useState(0.3)
   const [c_pos_z,set_c_pos_z] = React.useState(-0.6)
@@ -84,35 +67,23 @@ export default function DynamicHome(props) {
 
   const [dsp_message,set_dsp_message] = React.useState("")
 
-  // 工具列表与当前工具
+  // Robot Tool
   const toolNameList = ["No tool"]
   const [toolName,set_toolName] = React.useState(toolNameList[0])
 
-  // 动画帧ID
+  // Frame ID
   const reqIdRef = React.useRef()
-
-  // MQTT/状态同步相关
-  const receiveStateRef = React.useRef(false);
-  const currentRotationRef = React.useRef(new THREE.Euler(0.6654549523360951,0,0,order));
   
-  const lastLoopTimeRef = React.useRef(performance.now());
-  // 动画主循环，驱动渲染和运动学动画
+  // Animation loop
   const loop = ()=>{
-    const now = performance.now();
-    const dt = now - lastLoopTimeRef.current;
-    lastLoopTimeRef.current = now;
-    // console.log('主循环周期(ms):', dt); //mean dt 16.5ms
-    setNow(performance.now()); // 更新时间戳，驱动依赖 now 的动画 useEffect
-    reqIdRef.current = window.requestAnimationFrame(loop) // 持续递归调用，形成动画循环
+    reqIdRef.current = window.requestAnimationFrame(loop) 
   }
-
-  // 初始化动画循环
   React.useEffect(() => {
     loop()
-    return () => window.cancelAnimationFrame(reqIdRef.current) // 组件卸载时清理动画帧
+    return () => window.cancelAnimationFrame(reqIdRef.current) 
   },[])
 
-  // 切换机器人模型
+  // Change Robot
   const robotChange = ()=>{
     const get = (robotName)=>{
       let changeIdx = robotNameList.findIndex((e)=>e===robotName) + 1
@@ -124,93 +95,14 @@ export default function DynamicHome(props) {
     set_robotName(get)
   }
 
-
-  // 机器人请求函数，向MQTT服务器请求机器人信息
-  const requestRobot = (mqclient) =>{
-        // 制御対象のロボットを探索（表示された時点で実施）
-        const requestInfo = {
-          devId: idtopic, // 自分のID
-          type: codeType,  //  コードタイプ（Request でマッチングに利用)
-        }
-        console.log("Publish request",requestInfo)
-        publishMQTT(MQTT_REQUEST_TOPIC, JSON.stringify(requestInfo));
-  }
-
-  // MQTT 相关的 useEffect（连接、订阅、消息处理）
-  const mqttclientRef = React.useRef(null);
-  useMqtt({
-  props,
-  set_rendered,
-  robotIDRef,
-  publishMQTT,
-  MQTT_REQUEST_TOPIC, MQTT_DEVICE_TOPIC, MQTT_CTRL_TOPIC, MQTT_ROBOT_STATE_TOPIC,
-  receiveStateRef,
-  mqttclientRef, //not used
-  gripRef,
-  button_A_Ref,
-  button_B_Ref,
-  gripValueRef,
-  set_target_error,
-  set_dsp_message,
-  setNow,
-  vrModeRef,
-  THREE
-  });
-
-
-  // 持续传输机器人状态
-  /**
-   * 定时通过 MQTT 发送当前机器人关节状态（用于 Viewer/Monitor 实时同步）
-   * @param {number} time - 当前时间戳
-   */
-  const onAnimationMQTT = (time) =>{
-    const robot_state_json = JSON.stringify({
-      time: time,
-      joints: theta_body.current, // 当前各关节角度
-      grip: gripRef.current      // 当前夹爪状态
-    });
-    publishMQTT(MQTT_ROBOT_STATE_TOPIC+idtopic , robot_state_json); // 发布到机器人状态主题
-    window.requestAnimationFrame(onAnimationMQTT); // 持续递归调用，形成定时推送
-  }
-
-  /**
-   * 在 XR 渲染帧回调中发送控制指令到 MQTT
-   * @param {number} time - 当前时间戳
-   * @param {XRFrame} frame - XR 帧对象
-   */
-  const onXRFrameMQTT = (time, frame) => {
-    // Viewer 模式下每帧递归调用自身
-    if(props.viewer){
-      frame.session.requestAnimationFrame(onXRFrameMQTT);
-    }else{
-      // 仅在 VR 模式下递归调用自身
-      if (vrModeRef.current){
-        frame.session.requestAnimationFrame(onXRFrameMQTT);
-        setNow(performance.now()); // VR模式下需手动更新时间戳，驱动动画
-      }
-    }
-
-    // 仅在已连接 MQTT 且允许发送状态时推送
-    if ((mqttclient != null) && receiveStateRef.current) {
-      // 组装并发送控制指令
-      const ctl_json = JSON.stringify({
-        time: time,
-        joints: theta_body.current,
-        trigger: [gripRef.current, button_A_Ref.current, button_B_Ref.current, gripValueRef.current]
-      });
-      publishMQTT(MQTT_CTRL_TOPIC, ctl_json);
-    }
-  }
-
   /*** Robot Controller ***/
   // Initial joint and tool angles
   // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
   const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
   const [theta_body, setThetaBody] = React.useState(theta_body_initial);
 
-  const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
-  const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
-  
+  // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
+  // const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
 
   const theta_tool_inital = 0;
   const [theta_tool, setThetaTool] = React.useState(theta_tool_inital);
@@ -233,11 +125,10 @@ export default function DynamicHome(props) {
         setThetaBody(q_hist[idx]);
         idx += Math.max(1, Math.floor(q_hist.length / 16.5));
         // console.log('setThetaBody:', idx, q_hist.length, q_hist[idx]);
-        setTimeout(animate, 16.5); // 可调节速度
+        setTimeout(animate, 16.5); 
       } else {
         setThetaBodyGuess(q_hist[q_hist.length - 1]);
         animatingRef.current = false;
-        // 播放完后移除队首，自动播放下一个
         setQHistQueue(queue => queue.slice(1));
       }
     }
@@ -269,10 +160,10 @@ export default function DynamicHome(props) {
     setEuler(mr.RotMatToEuler(R, Euler_order)); // Update to ZYX Euler angles
     }, [theta_body]);
   
-
   /**
    *  Control Methods
    * /
+   * 
   /** Kinamatics Control **/
   function KinamaticsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
@@ -284,8 +175,10 @@ export default function DynamicHome(props) {
       );
       setThetaBody(thetalist_sol_limited);
       setThetaBodyGuess(thetalist_sol_limited);
+      set_target_error(false);
     } else {
       console.warn("IK failed to converge");
+      set_target_error(true);
     }
   }
 
@@ -317,50 +210,15 @@ export default function DynamicHome(props) {
     }
   }
 
-  /** Virtual Force control
-   * Using VR controller's virtal force as input to control robot end effector
-  */
-  function VirtualForceControl(Ftip, dt) {
-    const g = [0, 0, -9.81]; 
-
-    const q = theta_body.slice();
-    const dq = dtheta_body.slice();
-
-    // Gravity compensation
-    const tau_gravity = mr.GravityForces(q, g, Mlist, Glist, Slist)
-
-    // Forward dynamics simulation, return joint accelerations
-    const ddq = mr.ForwardDynamics(q, dq, tau_gravity, g, Ftip, Mlist, Glist, Slist)
-
-    //Euler integration to update joint angles and velocities
-    const dq_next = dq.map((v, i) => v + ddq[i] * dt);
-    const q_next = q.map((v, i) => v + dq_next[i] * dt);
-
-    // Update joint and joint velocities
-    setThetaBody(q_next);
-    setdThetaBody(dq_next);
-  }
-
   /* VR Controller Simulation */
   const lastPosRef = React.useRef(controller_object.position.clone());
   const lastEulerRef = React.useRef(controller_object.rotation.clone());
   // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
-  const Pos_scale = 0.5; 
-  const Euler_scale = 0.5;
 
-  const lastVRInputTimeRef = React.useRef(performance.now());
   const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
   React.useEffect(() => {
-    const now = performance.now();
-    // const dt = now - lastVRInputTimeRef.current;
+    // VR input period
     const dt = 16.5/1000;
-    lastVRInputTimeRef.current = now;
-    console.log('VR input period(ms):', dt);
-
-    if (!trigger_on) {
-      setdThetaBody([0, 0, 0, 0, 0, 0]);
-    }
-
     if (rendered && vrModeRef.current && trigger_on) {
       const deltaPos = {
         x: controller_object.position.x - lastPosRef.current.x,
@@ -370,7 +228,8 @@ export default function DynamicHome(props) {
 
       /**
        * Revelant Rotation 
-       * (Using abusolute Euler angles will cause drift, especeially when VR controller is far from human body)
+       * Use abusolute Euler angles or quaternion could cause drift, 
+       * especeially when VR controller is far from human body.
        */
 
       // current and last Euler angles of VR controller
@@ -416,7 +275,7 @@ export default function DynamicHome(props) {
       const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z];
       const deltaEuler_World = mr.three2world(deltaEuler_Three);
 
-      console.log('ΔPosition:', deltaPos, 'ΔEuler:', deltaEuler);
+      // console.log('ΔPosition:', deltaPos, 'ΔEuler:', deltaEuler);
 
       /* 
       * VR Input Method
@@ -447,10 +306,10 @@ export default function DynamicHome(props) {
       //   z: clamp(deltaEuler_World[2] / dt, -0.002, 0.002)
       // };
 
-      // Inpedance
-      const Kp_VR = [80, 120, 80, 15, 15, 12]; // 位置/姿态弹簧系数
-      const Kd_VR = [18, 20, 18, 1.8, 1.5, 1.2];    // 位置/姿态阻尼系数
-      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];     // 虚拟质量
+      // Vertial Inpedance
+      const Kp_VR = [80, 120, 80, 15, 15, 12]; 
+      const Kd_VR = [18, 20, 18, 1.8, 1.5, 1.2];    
+      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];    
 
       let v = v_imp_ref.current.slice();
 
@@ -487,7 +346,7 @@ export default function DynamicHome(props) {
         z: v[5] + accEuler.z * dt
       };
 
-      console.log('Translation Speed:', speedPos, 'Rotation Speed:', speedEuler, 'dt(s):', dt);
+      // console.log('Translation Speed:', speedPos, 'Rotation Speed:', speedEuler, 'dt(s):', dt);
 
       /**
        * Inverse Kinematics Control
@@ -507,25 +366,14 @@ export default function DynamicHome(props) {
       ];
 
       KinamaticsControl(newPos, newEuler);
-
+      
+      const Pos_scale = 0.50; 
+      const Euler_scale = 0.38;
       v_imp_ref.current = [
         Pos_scale*speedPos.x, Pos_scale*speedPos.y, Pos_scale*speedPos.z,
         Euler_scale*speedEuler.x, Euler_scale*speedEuler.y, Euler_scale*speedEuler.z
       ];
-
-      /**
-       * Virtual Force Control
-       */
-      // const Ftip = [
-      //   ForcePos.x * Pos_scale,
-      //   ForcePos.y * Pos_scale,
-      //   ForcePos.z * Pos_scale,
-      //   ForceEuler.x * Euler_scale,
-      //   ForceEuler.y * Euler_scale,
-      //   ForceEuler.z * Euler_scale
-      // ];
-      // VirtualForceControl(Ftip, dt);
-
+      // console.log('Virtual velocity:', v_imp_ref.current);
 
       /**
        * Dynamics Control
@@ -547,18 +395,18 @@ export default function DynamicHome(props) {
     trigger_on,
   ]);
 
-  const vr_controller_pos = [
-  controller_object.position.x,
-  controller_object.position.y,
-  controller_object.position.z
-  ];
-  const vr_controller_euler = [
-    controller_object.rotation.x,
-    controller_object.rotation.y,
-    controller_object.rotation.z
-  ];
+  // const vr_controller_pos = [
+  // controller_object.position.x,
+  // controller_object.position.y,
+  // controller_object.position.z
+  // ];
+  // const vr_controller_euler = [
+  //   controller_object.rotation.x,
+  //   controller_object.rotation.y,
+  //   controller_object.rotation.z
+  // ];
 
-  // AB 按钮独立控制夹爪/工具
+  // Gripper Control 
   React.useEffect(() => {
     if (button_A_Ref.current) {
       setThetaTool(prev => prev + 5); 
@@ -608,27 +456,80 @@ export default function DynamicHome(props) {
       set_c_pos_x, set_c_pos_y, set_c_pos_z,
       set_c_deg_x, set_c_deg_y, set_c_deg_z,
       vrModeRef,
-      currentRotationRef,
       controller_object,
-      order,
+      Euler_order,
       props,
       onAnimationMQTT,
       onXRFrameMQTT,
     });
   }, []);
 
+  /* 
+  * MQTT 
+  */
+  const thetaBodyMQTT = React.useRef(theta_body);
+  React.useEffect(() => {
+    thetaBodyMQTT.current = theta_body;
+  }, [theta_body]);
+
+  React.useEffect(() => {
+    window.requestAnimationFrame(onAnimationMQTT);
+  }, []);
+  
+  // web MQTT
+  const onAnimationMQTT = (time) =>{
+    const robot_state_json = JSON.stringify({
+      time: time,
+      joints: thetaBodyMQTT.current,
+      grip: gripRef.current      
+    });
+    publishMQTT(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current , robot_state_json); 
+    // console.log("onAnimationMQTT published:", robot_state_json);
+    window.requestAnimationFrame(onAnimationMQTT); 
+  }
+
+  // VR MQTT
+  const receiveStateRef = React.useRef(true); // VR MQTT switch
+  const onXRFrameMQTT = (time, frame) => {
+    if(props.viewer){
+      frame.session.requestAnimationFrame(onXRFrameMQTT);
+    }else{
+      if (vrModeRef.current){
+        frame.session.requestAnimationFrame(onXRFrameMQTT);
+        setNow(performance.now()); 
+      }
+    }
+    if ((mqttclient != null) && receiveStateRef.current) {
+      const ctl_json = JSON.stringify({
+        time: time,
+        joints: thetaBodyMQTT.current,
+        trigger: [gripRef.current, button_A_Ref.current, button_B_Ref.current, gripValueRef.current]
+      });
+      publishMQTT(MQTT_VR_TOPIC + robotIDRef.current, ctl_json);
+    }
+  }
+
+  useMqtt({
+    props,
+    thetaBodyMQTT: setThetaBody,
+    robotIDRef,
+    MQTT_REQUEST_TOPIC, 
+    MQTT_DEVICE_TOPIC, 
+    MQTT_VR_TOPIC, 
+    MQTT_ROBOT_STATE_TOPIC,
+    receiveStateRef,
+  });
+
   // Robot Model Update Props
   const robotProps = React.useMemo(() => ({
     robotNameList, robotName, theta_body, theta_tool
   }), [robotNameList, robotName, theta_body, theta_tool]);
-
+  
   // Robot Secene Render
   return (
     <RobotScene
       rendered={rendered}
       target_error={target_error}
-      box_vis={box_vis}
-      cursor_vis={cursor_vis}
       robotProps={robotProps}
       controllerProps={controllerProps}
       dsp_message={dsp_message}
@@ -642,8 +543,8 @@ export default function DynamicHome(props) {
       monitor={props.monitor}
       position_ee={position_ee_Three}
       euler_ee={euler_ee_Three}
-      vr_controller_pos={vr_controller_pos}
-      vr_controller_euler={vr_controller_euler}
+      // vr_controller_pos={vr_controller_pos}
+      // vr_controller_euler={vr_controller_euler}
     />
   );
 }

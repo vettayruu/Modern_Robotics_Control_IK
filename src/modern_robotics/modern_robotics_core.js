@@ -361,35 +361,38 @@ function RotMatToEuler(R, order = "ZYX") {
  * @returns {Array<Array<number>>} 3x3旋转矩阵
  */
 function EulerToRotMat(euler, order = "ZYX") {
-    const [yaw, pitch, roll] = euler;
-    // 绕Z轴旋转
-    const Rz = [
-        [Math.cos(yaw), -Math.sin(yaw), 0],
-        [Math.sin(yaw),  Math.cos(yaw), 0],
-        [0, 0, 1]
-    ];
-    // 绕Y轴旋转
-    const Ry = [
-        [ Math.cos(pitch), 0, Math.sin(pitch)],
-        [0, 1, 0],
-        [-Math.sin(pitch), 0, Math.cos(pitch)]
-    ];
-    // 绕X轴旋转
-    const Rx = [
-        [1, 0, 0],
-        [0, Math.cos(roll), -Math.sin(roll)],
-        [0, Math.sin(roll),  Math.cos(roll)]
-    ];
+    const [alpha, beta, gamma] = euler;
+    function Rz(angle) {
+        return [
+            [Math.cos(angle), -Math.sin(angle), 0],
+            [Math.sin(angle),  Math.cos(angle), 0],
+            [0, 0, 1]
+        ];
+    }
+    function Ry(angle) {
+        return [
+            [ Math.cos(angle), 0, Math.sin(angle)],
+            [0, 1, 0],
+            [-Math.sin(angle), 0, Math.cos(angle)]
+        ];
+    }
+    function Rx(angle) {
+        return [
+            [1, 0, 0],
+            [0, Math.cos(angle), -Math.sin(angle)],
+            [0, Math.sin(angle),  Math.cos(angle)]
+        ];
+    }
 
     if (order === "ZYX") {
         // [yaw(Z), pitch(Y), roll(X)]
-        return matDot(matDot(Rz, Ry), Rx);
+        return matDot(matDot(Rz(alpha), Ry(beta)), Rx(gamma));
     } else if (order === "XYZ") {
         // [roll(X), pitch(Y), yaw(Z)]
-        return matDot(matDot(Rx, Ry), Rz);
+        return matDot(matDot(Rx(alpha), Ry(beta)), Rz(gamma));
     } else if (order === "ZYZ") {
         // [roll(X), pitch(Y), yaw(Z)]
-        return matDot(matDot(Rz, Ry), Rz);
+        return matDot(matDot(Rz(alpha), Ry(beta)), Rz(gamma));
     } 
     else {
         throw new Error("Unsupported Euler order: " + order);

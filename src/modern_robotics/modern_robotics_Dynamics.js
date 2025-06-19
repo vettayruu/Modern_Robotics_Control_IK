@@ -283,9 +283,13 @@ RobotDynamcis.register_robot("piper_agilex", function build_piper_6dof() {
 
     const SlistT = Array.from({length: 6}, (_, i) => Slist.map(row => row[i]));
 
+    // const Kplist = [3.5, 20, 15, 2.5, 0.5, 0.45]
+    // const Kilist = [0.00025, 0.035, 0.000225, 0, 0, 0.0003]
+    // const Kdlist = [1.2, 6.5, 4.2, 0.85, 0.1, 0.08]
+
     const Kplist = [3.5, 20, 15, 2.5, 0.5, 0.45]
     const Kilist = [0.00025, 0.035, 0.000225, 0, 0, 0.0003]
-    const Kdlist = [1.2, 6.5, 4.2, 0.85, 0.1, 0.08]
+    const Kdlist = [0.6, 3.0, 2.0, 0.45, 0.1, 0.08]
 
     return { M, Mlist, Glist, Slist: SlistT, Kplist, Kilist, Kdlist, jointLimits };
 });
