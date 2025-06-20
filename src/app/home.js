@@ -21,7 +21,7 @@ const Kplist = rk.get_Kplist();
 const Kilist = rk.get_Kilist(); 
 const Kdlist = rk.get_Kdlist(); 
 const jointLimits = rk.jointLimits;
-const toolLimit = rk.toolLimits;
+const toolLimit = rk.toolLimit;
 const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 
 // MQTT Topics
