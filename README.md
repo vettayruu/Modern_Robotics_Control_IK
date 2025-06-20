@@ -4,6 +4,8 @@ Source code: https://github.com/NxRLab/ModernRobotics
 
 The latest branch is the "MQTT".
 
+The VR controller input uses impedance input to avoid target drift. 
+
 To run the code:
 
 npm run dev-https
