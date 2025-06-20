@@ -4,11 +4,11 @@ import * as React from 'react'
 import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
 import useMqtt from './useMqtt';
-import { connectMQTT, mqttclient,idtopic,subscribeMQTT, publishMQTT, codeType } from '../lib/MetaworkMQTT'
+import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 
 const THREE = window.AFRAME.THREE;
 const mr = require('../modern_robotics/modern_robotics_core.js');
-const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
+// const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
 
 // Load Robot Model
@@ -21,6 +21,7 @@ const Kplist = rk.get_Kplist();
 const Kilist = rk.get_Kilist(); 
 const Kdlist = rk.get_Kdlist(); 
 const jointLimits = rk.jointLimits;
+const toolLimit = rk.toolLimits;
 const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 
 // MQTT Topics
@@ -37,22 +38,15 @@ export default function DynamicHome(props) {
 
   const [target_error,set_target_error] = React.useState(false)
 
+  const vrModeRef = React.useRef(false); 
+  const [trigger_on,set_trigger_on] = React.useState(false)
+  const [grip_on, set_grip_on] = React.useState(false)
+  const [button_a_on, set_button_a_on] = React.useState(false)
+  const [button_b_on, set_button_b_on] = React.useState(false)
   const [controller_object, set_controller_object] = React.useState(() => {
     const controller_object = new THREE.Object3D();
     return controller_object;
     });
-
-  const [trigger_on,set_trigger_on] = React.useState(false)
-  const vrModeRef = React.useRef(false); 
-
-  const gripRef = React.useRef(false);
-  const gripValueRef = React.useRef(0);
-
-  const [button_a_on, set_button_a_on] = React.useState(false);
-  const button_A_Ref = React.useRef(null);
-  const [button_b_on, set_button_b_on] = React.useState(false)
-  const button_B_Ref = React.useRef(null);
-
 
   const [selectedMode, setSelectedMode] = React.useState('control'); 
   const robotIDRef = React.useRef("Model"); 
@@ -112,7 +106,6 @@ export default function DynamicHome(props) {
   /*** Dynamics VR Animation ***/
   const [qHistQueue, setQHistQueue] = React.useState([]);
   const animatingRef = React.useRef(false);
-
   React.useEffect(() => {
     if (animatingRef.current) return;
     if (qHistQueue.length === 0) return;
@@ -123,9 +116,9 @@ export default function DynamicHome(props) {
       if (!q_hist) return;
       if (idx < q_hist.length) {
         setThetaBody(q_hist[idx]);
-        idx += Math.max(1, Math.floor(q_hist.length / 16.5));
+        idx += 1;
         // console.log('setThetaBody:', idx, q_hist.length, q_hist[idx]);
-        setTimeout(animate, 16.5); 
+        setTimeout(animate, 1); 
       } else {
         setThetaBodyGuess(q_hist[q_hist.length - 1]);
         animatingRef.current = false;
@@ -219,7 +212,7 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     // VR input period
     const dt = 16.5/1000;
-    if (rendered && vrModeRef.current && trigger_on) {
+    if (rendered && vrModeRef.current && trigger_on ) {
       const deltaPos = {
         x: controller_object.position.x - lastPosRef.current.x,
         y: controller_object.position.y - lastPosRef.current.y,
@@ -407,15 +400,25 @@ export default function DynamicHome(props) {
   // ];
 
   // Gripper Control 
+  function clampTool(value) {
+    return Math.max(toolLimit.min, Math.min(toolLimit.max, value));
+  }
   React.useEffect(() => {
-    if (button_A_Ref.current) {
-      setThetaTool(prev => prev + 5); 
+    let intervalId = null;
+    if (grip_on && button_a_on) {
+      intervalId = setInterval(() => {
+        setThetaTool(prev => clampTool(prev + 0.5));
+      }, 16.5); 
     }
-    if (button_B_Ref.current) {
-      setThetaTool(prev => prev + 5); 
+    else if (grip_on && button_b_on) {
+      intervalId = setInterval(() => {
+        setThetaTool(prev => clampTool(prev - 0.5));
+      }, 16.5); 
     }
-  }, [button_A_Ref.current, button_B_Ref.current]);
-
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [ button_a_on, button_b_on, grip_on]);
 
   // webController Inputs
   const controllerProps = React.useMemo(() => ({
@@ -429,8 +432,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    onTargetChange: KinamaticsControl,
-    // onTargetChange: DynamicsControl
+    // onTargetChange: KinamaticsControl,
+    onTargetChange: DynamicsControl
   }), [
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
@@ -442,8 +445,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    KinamaticsControl,
-    // DynamicsControl
+    // KinamaticsControl,
+    DynamicsControl
   ]);
 
   // VRController Inputs (Aframe Components)
@@ -453,13 +456,15 @@ export default function DynamicHome(props) {
       robotChange,
       set_controller_object,
       set_trigger_on,
+      set_grip_on,
+      set_button_a_on,
+      set_button_b_on,
       set_c_pos_x, set_c_pos_y, set_c_pos_z,
       set_c_deg_x, set_c_deg_y, set_c_deg_z,
       vrModeRef,
       controller_object,
       Euler_order,
       props,
-      onAnimationMQTT,
       onXRFrameMQTT,
     });
   }, []);
@@ -472,6 +477,11 @@ export default function DynamicHome(props) {
     thetaBodyMQTT.current = theta_body;
   }, [theta_body]);
 
+  const thetaToolMQTT = React.useRef(theta_tool);
+  React.useEffect(() => {
+    thetaToolMQTT.current = theta_tool;
+  }, [theta_tool]);
+
   React.useEffect(() => {
     window.requestAnimationFrame(onAnimationMQTT);
   }, []);
@@ -481,7 +491,7 @@ export default function DynamicHome(props) {
     const robot_state_json = JSON.stringify({
       time: time,
       joints: thetaBodyMQTT.current,
-      grip: gripRef.current      
+      // grip: gripRef.current      
     });
     publishMQTT(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current , robot_state_json); 
     // console.log("onAnimationMQTT published:", robot_state_json);
@@ -491,36 +501,39 @@ export default function DynamicHome(props) {
   // VR MQTT
   const receiveStateRef = React.useRef(true); // VR MQTT switch
   const onXRFrameMQTT = (time, frame) => {
-    if(props.viewer){
+    if (vrModeRef.current){
       frame.session.requestAnimationFrame(onXRFrameMQTT);
-    }else{
-      if (vrModeRef.current){
-        frame.session.requestAnimationFrame(onXRFrameMQTT);
-        setNow(performance.now()); 
-      }
+      setNow(performance.now()); 
     }
     if ((mqttclient != null) && receiveStateRef.current) {
       const ctl_json = JSON.stringify({
         time: time,
         joints: thetaBodyMQTT.current,
-        trigger: [gripRef.current, button_A_Ref.current, button_B_Ref.current, gripValueRef.current]
+        tool: thetaToolMQTT.current
       });
       publishMQTT(MQTT_VR_TOPIC + robotIDRef.current, ctl_json);
     }
   }
+  const requestRobot = (mqclient) => {
+    const requestInfo = {
+      devId: idtopic,
+      type: codeType,
+    }
+    publishMQTT(MQTT_REQUEST_TOPIC, JSON.stringify(requestInfo));
+  }
 
   useMqtt({
     props,
+    requestRobot,
     thetaBodyMQTT: setThetaBody,
+    thetaToolMQTT: setThetaTool,
     robotIDRef,
-    MQTT_REQUEST_TOPIC, 
     MQTT_DEVICE_TOPIC, 
     MQTT_VR_TOPIC, 
     MQTT_ROBOT_STATE_TOPIC,
-    receiveStateRef,
   });
 
-  // Robot Model Update Props
+  // Robot State Update Props
   const robotProps = React.useMemo(() => ({
     robotNameList, robotName, theta_body, theta_tool
   }), [robotNameList, robotName, theta_body, theta_tool]);

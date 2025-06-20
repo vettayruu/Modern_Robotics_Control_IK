@@ -25,9 +25,9 @@
 
 .joint-controll-panel {
   position: fixed;
-  top: 300px;         /* 根据实际页面调整 */
-  right: 380px;       /* 距离右侧边距 */
-  width: 500px;      /* 或你想要的宽度 */
+  top: 300px;        
+  right: 380px;       
+  width: 500px;     
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -37,9 +37,9 @@
 
 .modern-robot-controll-panel {
   position: fixed;
-  top: 600px;         /* 根据实际页面调整 */
-  right: 80px;       /* 距离右侧边距 */
-  width: 600px;      /* 或你想要的宽度 */
+  top: 600px;        
+  right: 80px;      
+  width: 600px;    
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);

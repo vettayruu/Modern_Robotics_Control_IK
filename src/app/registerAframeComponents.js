@@ -9,17 +9,20 @@ export default function registerAframeComponents(options) {
     robotChange,
     set_controller_object,
     set_trigger_on,
+    set_grip_on,
+    set_button_a_on,
+    set_button_b_on,
     set_c_pos_x, set_c_pos_y, set_c_pos_z,
     set_c_deg_x, set_c_deg_y, set_c_deg_z,
     vrModeRef,
     controller_object,
     Euler_order,
     props,
-    onAnimationMQTT,
     onXRFrameMQTT,
   } = options;
-
-  setTimeout(() => set_rendered(true), 10);
+  
+  // set rendered state after a short delay to ensure the scene is ready
+  setTimeout(() => set_rendered(true), 16.5);
 
   AFRAME.registerComponent('robot-click', {
     init: function () {
@@ -35,12 +38,20 @@ export default function registerAframeComponents(options) {
     init: function () {
       set_controller_object(this.el.object3D);
       this.el.object3D.rotation.order = Euler_order;
-      this.el.addEventListener('triggerdown', () => {
-        set_trigger_on(true);
-      });
-      this.el.addEventListener('triggerup', () => {
-        set_trigger_on(false);
-      });
+      // Trigger 
+      this.el.addEventListener('triggerdown', () => set_trigger_on(true));
+      this.el.addEventListener('triggerup', () => set_trigger_on(false));
+
+      // Gripper
+      this.el.addEventListener('gripdown', () => set_grip_on(true));
+      this.el.addEventListener('gripup', () => set_grip_on(false));
+
+      // A/B
+      this.el.addEventListener('abuttondown', () => set_button_a_on(true));
+      this.el.addEventListener('abuttonup', () => set_button_a_on(false));
+      this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
+      this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
+
     },
     update: function () {
       if (this.el.object3D !== controller_object) {
@@ -95,11 +106,9 @@ export default function registerAframeComponents(options) {
     }
   });
 
+  // Start animation in VR scene
   AFRAME.registerComponent('scene', {
     init: function () {
-      if (props.viewer) {
-        window.requestAnimationFrame(onAnimationMQTT);
-      }
       this.el.addEventListener('enter-vr', () => {
         vrModeRef.current = true;
         console.log('enter-vr');

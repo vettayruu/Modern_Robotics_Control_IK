@@ -2,36 +2,6 @@
 import * as React from 'react'
 import "./webcontroller.css";
 
-// モード選択
-const ModeSelector = ({ selectedMode, setSelectedMode }) => {
-
-  const modes = [
-    { id: 'control', label: 'Ctrl' }, // 通常の制御モード（VRゴーグル等で操作）
-    { id: 'monitor', label: 'Mon' },  // 実ロボットをモニター
-    { id: 'vr', label: 'fromVR' }     // 制御トピックをモニター(VRゴーグルからの制御)
-  ];
-
-  return (
-      <div className="flex space-x-1 rounded-lg bg-gray-100 p-2">
-        Mode: 
-        {modes.map((mode) => (
-          <button
-            key={mode.id}
-            onClick={() => setSelectedMode(mode.id)}
-            className={`px-2 py-1 rounded-md ${
-              selectedMode === mode.id
-                ? 'bg-white shadow-sm text-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            {mode.label}
-          </button>
-        ))}
-      </div>
-  );
-};
-
-
 export default function Controller(props) {
 const {c_pos_x, c_pos_y, c_pos_z} = props
 const {c_deg_x, c_deg_y, c_deg_z} = props
@@ -40,7 +10,6 @@ const {theta_body} = props
 const {theta_tool} = props
 const {position_ee} = props
 const {euler_ee} = props
-// const {twist_ee} = props
 
 const set_c_pos_x = (e)=>{
   let value = Number.parseFloat(e.target.value || 0)
@@ -73,7 +42,6 @@ const set_c_deg_z = (e)=>{
 }
 
 
-// 定义每个关节的限制
 const jointLimits = [
   { min: -150, max: 150 }, // theta_1
   { min: -90,  max: 90  }, // theta_2
@@ -87,13 +55,7 @@ const jointLimits = [
 const step = 1
 
 return (
-  <>
-    {/* <div className="controller" >
-      <div className="row mb-0">
-        <ModeSelector selectedMode={selectedMode} setSelectedMode={setSelectedMode} />
-      </div>
-    </div> */}
-    
+  <>  
     <div className="camera-controller" >
       {vr_mode?null:<><span>CAMERA</span>
       <div className="row mb-0">
@@ -229,25 +191,6 @@ return (
               </div>
             ))}
           </div>
-
-          {/* Twist 列
-          <div className="col-md-6">
-            <div className="col-md-6">
-              <div className="mb-2 fw-bold">Twist (EE)</div>
-              {['omega hat (x)', 'omega hat (y)', 'omega hat (z)', 'theta'].map((label, idx) => (
-                <div className="mb-2" key={label}>
-                  <label className="form-label">{label}</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={twist_ee && twist_ee[0] && idx < 3 ? twist_ee[0][idx].toFixed(5) : (idx === 3 && twist_ee ? twist_ee[1].toFixed(5) : '')}
-                    readOnly
-                  />
-                </div>
-              ))}
-            </div>
-          </div>   */}
-
       </div>  
   </>
   )

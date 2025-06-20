@@ -64,7 +64,8 @@ export const connectMQTT = (callback) => {
 
 export const subscribeMQTT = (topic) => {
     if (mqttclient == null) {
-        connectMQTT();
+        console.error('MQTT client not connected!');
+        return;
     }
     mqttclient.subscribe(topic, {noLocal: true}, (err, granted) => {
         if (!err) {

@@ -6,7 +6,7 @@ class RobotDynamcis {
         if (!(robot_id in RobotDynamcis._builders)) {
             throw new Error(`Unsupported robot_id: ${robot_id}`);
         }
-        const { M, Mlist, Glist, Slist, Kplist, Kilist, Kdlist, jointLimits } = RobotDynamcis._builders[robot_id]();
+        const { M, Mlist, Glist, Slist, Kplist, Kilist, Kdlist, jointLimits, toolLimit } = RobotDynamcis._builders[robot_id]();
         this.M = M;
         this.Mlist = Mlist;
         this.Glist = Glist;
@@ -15,6 +15,7 @@ class RobotDynamcis {
         this.Kilist = Kilist;
         this.Kdlist = Kdlist;
         this.jointLimits = jointLimits;
+        this.toolLimit = toolLimit;
     }
 
     static register_robot(robot_id, builderFunc) {
@@ -51,6 +52,10 @@ class RobotDynamcis {
     get_jointLimits() {
         return this.jointLimits;
     }
+
+    get_toolLimits() {
+        return this.toolLimit;
+    }
 }
 
 //  piper_agilex robot
@@ -68,6 +73,8 @@ RobotDynamcis.register_robot("piper_agilex", function build_piper_6dof() {
     { min: deg2rad(0),    max: deg2rad(139) },   // theta_5
     { min: deg2rad(-120), max: deg2rad(120) },   // theta_6
     ];
+
+    const toolLimit = { min: -1, max: 89 }; // theta_tool
 
     // const jointLimits = [
     // { min: deg2rad(-120), max: deg2rad(120) },   // theta_1
@@ -291,7 +298,7 @@ RobotDynamcis.register_robot("piper_agilex", function build_piper_6dof() {
     const Kilist = [0.00025, 0.035, 0.000225, 0, 0, 0.0003]
     const Kdlist = [0.6, 3.0, 2.0, 0.45, 0.1, 0.08]
 
-    return { M, Mlist, Glist, Slist: SlistT, Kplist, Kilist, Kdlist, jointLimits };
+    return { M, Mlist, Glist, Slist: SlistT, Kplist, Kilist, Kdlist, jointLimits, toolLimit };
 });
 
 // // 注册其他机器人示例
