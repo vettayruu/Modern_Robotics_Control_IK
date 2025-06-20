@@ -2,10 +2,12 @@ The IK is based on Modern Robotics.
 
 Source code: https://github.com/NxRLab/ModernRobotics
 
-The kinematics parts are changed to javascript.
-
-2025/06/12 Dynamics control is added into the controller, but the VR still can not work with dynamics control. 
+The latest branch is the "MQTT".
 
 To run the code:
 
 npm run dev-https
+
+To open the viewer, add "/viewer" after the address such as
+
+https://192.168.197.37:3000/viewer/
