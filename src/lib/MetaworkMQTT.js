@@ -8,6 +8,7 @@ export const codeType = package_info.name; // software name
 const version = package_info.version; // version number
 
 const MQTT_BROKER_URL = "wss://sora2.uclab.jp/mqws"; // For Nagoya-U UCLab Development
+// const MQTT_BROKER_URL = "wss://192.168.197.37:8084"; // For Local Development
 
 import {userUUID} from './cookie_id';
 
@@ -77,5 +78,6 @@ export const subscribeMQTT = (topic) => {
 }
 
 export const publishMQTT = (topic, msg) => {
+    // console.log('前端发送MQTT:', topic, msg);
     mqttclient.publish(topic, msg);
 }

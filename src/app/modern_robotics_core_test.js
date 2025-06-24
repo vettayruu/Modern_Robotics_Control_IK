@@ -714,3 +714,4 @@ const ddthetalist = mr.ForwardDynamics(
 );
 console.log("ForwardDynamics Output:");
 console.log(ddthetalist);
+// output: [ -0.9739290670855627, 25.584667840340554, -32.91499212478148 ]

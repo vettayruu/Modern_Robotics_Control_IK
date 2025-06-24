@@ -18,7 +18,7 @@ const Line = (props) => {
 
 export default function RobotScene(props) {
   const {
-    rendered, target_error, robotProps, controllerProps, dsp_message,
+    robot_model, rendered, target_error, robotProps, controllerProps, dsp_message,
     c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z, 
     position_ee, euler_ee, 
     // vr_controller_pos, vr_controller_euler,
@@ -30,7 +30,7 @@ export default function RobotScene(props) {
   if (!rendered) {
     return (
       <a-scene xr-mode-ui="XRMode: ar">
-        <Assets viewer={props.viewer}/>
+        <Assets robot_model={robot_model} viewer={props.viewer}/>
       </a-scene>
     );
     }
@@ -41,7 +41,7 @@ export default function RobotScene(props) {
         {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
 
-        <Assets viewer={props.viewer} monitor={props.monitor}/>
+        <Assets robot_model={robot_model} viewer={props.viewer} monitor={props.monitor}/>
 
         {/* Robot */}
         <Select_Robot {...robotProps}/>

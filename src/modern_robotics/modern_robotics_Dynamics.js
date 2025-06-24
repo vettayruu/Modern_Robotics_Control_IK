@@ -59,7 +59,7 @@ class RobotDynamcis {
 }
 
 //  piper_agilex robot
-RobotDynamcis.register_robot("piper_agilex", function build_piper_6dof() {
+RobotDynamcis.register_robot("agilex_piper", function build_piper_6dof() {
     const L_01 = 0.123, L_23 = 0.28503, L_34 = 0.25075, L_56 = 0.091, L_ee = 0.1358;
     const W_34 = 0.0219;
 

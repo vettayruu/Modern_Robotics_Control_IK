@@ -12,7 +12,8 @@ const mr = require('../modern_robotics/modern_robotics_core.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
 
 // Load Robot Model
-const rk = new RobotDynamcis("piper_agilex");
+const robot_model = "agilex_piper"; // Change this to your robot model
+const rk = new RobotDynamcis(robot_model);
 const M = rk.get_M();
 const Mlist = rk.get_Mlist();
 const Glist = rk.get_Glist();
@@ -27,7 +28,7 @@ const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_VR_TOPIC = "VR/"; 
+const MQTT_CTRL_TOPIC = "vr/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
 export default function DynamicHome(props) {
@@ -49,7 +50,7 @@ export default function DynamicHome(props) {
     });
 
   const [selectedMode, setSelectedMode] = React.useState('control'); 
-  const robotIDRef = React.useRef("Model"); 
+  const robotIDRef = React.useRef(idtopic); 
 
   // VR camera pose
   const [c_pos_x,set_c_pos_x] = React.useState(0.23)
@@ -511,7 +512,7 @@ export default function DynamicHome(props) {
         joints: thetaBodyMQTT.current,
         tool: thetaToolMQTT.current
       });
-      publishMQTT(MQTT_VR_TOPIC + robotIDRef.current, ctl_json);
+      publishMQTT(MQTT_CTRL_TOPIC + robotIDRef.current, ctl_json);
     }
   }
   const requestRobot = (mqclient) => {
@@ -529,7 +530,7 @@ export default function DynamicHome(props) {
     thetaToolMQTT: setThetaTool,
     robotIDRef,
     MQTT_DEVICE_TOPIC, 
-    MQTT_VR_TOPIC, 
+    MQTT_CTRL_TOPIC, 
     MQTT_ROBOT_STATE_TOPIC,
   });
 
@@ -541,6 +542,7 @@ export default function DynamicHome(props) {
   // Robot Secene Render
   return (
     <RobotScene
+      robot_model={robot_model}
       rendered={rendered}
       target_error={target_error}
       robotProps={robotProps}
