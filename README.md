@@ -18,7 +18,7 @@ https://192.168.197.37:3000/viewer/
 
 Then set the robot connection.
 
-Then， 他o control AgileX-Piper with MQTT: 
+Then， to control AgileX-Piper with MQTT: 
 1. Activate can bus: bash can_activate.sh can0 1000000
 2. Start Piper_sdk_ui
    In Piper SDK Tools
