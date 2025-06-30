@@ -159,7 +159,7 @@ export default function DynamicHome(props) {
    * /
    * 
   /** Kinamatics Control **/
-  function KinamaticsControl(newPos, newEuler) {
+  function KinematicsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
     const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
 
@@ -303,7 +303,11 @@ export default function DynamicHome(props) {
       // Vertial Inpedance
       const Kp_VR = [80, 120, 80, 15, 15, 12]; 
       const Kd_VR = [18, 20, 18, 1.8, 1.5, 1.2];    
-      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];    
+      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];   
+      
+      // const Kp_VR = [15, 15, 15, 15, 15, 12]; 
+      // const Kd_VR = [1.2, 1.2, 1.2, 1.8, 1.5, 1.2];    
+      // const M_VR = [0.1, 0.1, 0.1, 0.10, 0.10, 0.10];    
 
       let v = v_imp_ref.current.slice();
 
@@ -359,7 +363,7 @@ export default function DynamicHome(props) {
         currentEuler[2] - speedEuler.x * dt
       ];
 
-      KinamaticsControl(newPos, newEuler);
+      KinematicsControl(newPos, newEuler);
       
       const Pos_scale = 0.50; 
       const Euler_scale = 0.38;
@@ -433,7 +437,7 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // onTargetChange: KinamaticsControl,
+    // onTargetChange: KinematicsControl,
     onTargetChange: DynamicsControl
   }), [
     robotName, robotNameList, set_robotName,
@@ -446,7 +450,7 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // KinamaticsControl,
+    // KinematicsControl,
     DynamicsControl
   ]);
 

@@ -23,6 +23,7 @@ const Model = (props) => {
         height="1.2"
         color="#e0e0e0"
         opacity="0.5"
+        visible="false"
       ></a-plane>
 
       {/* Robot Base */}

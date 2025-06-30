@@ -70,7 +70,7 @@ RobotDynamcis.register_robot("agilex_piper", function build_piper_6dof() {
     { min: deg2rad(-90),  max: deg2rad(90)  },   // theta_2
     { min: deg2rad(0),    max: deg2rad(169) },   // theta_3
     { min: deg2rad(-99),  max: deg2rad(99)  },   // theta_4
-    { min: deg2rad(0),    max: deg2rad(139) },   // theta_5
+    { min: deg2rad(-69.901),    max: deg2rad(69.901) },   // theta_5
     { min: deg2rad(-120), max: deg2rad(120) },   // theta_6
     ];
 
