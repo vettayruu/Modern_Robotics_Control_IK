@@ -30,4 +30,4 @@ Then， to control AgileX-Piper with MQTT:
 4. Memo the UUID from the viewer. Open the viewer on the browser, press F12, and check "USER_UUID"
 5. Copy the UUID and change USER_UUID in "MQTT_Recv.py"
 6. Run robot controller "MQTT_Robot_Feedback_PD.py" with PD control, ""MQTT_Robot_Feedback_PD_Traj.py" with PD + Trajectory Plan,
-   "MQTT_Robot_Control.py" send control signal directly
+   "MQTT_Robot_Control.py" send the control signal directly
