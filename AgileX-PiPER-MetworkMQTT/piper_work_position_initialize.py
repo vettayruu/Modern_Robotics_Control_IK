@@ -74,19 +74,3 @@ if __name__ == "__main__":
 
     time.sleep(1)
     print(piper.GetArmJointMsgs())
-
-    # ArmMsgJointFeedBack:
-    # Joint
-    # 1: 0, 0.000
-    # Joint
-    # 2: 74315, 74.315
-    # Joint
-    # 3: -87431, -87.431
-    # Joint
-    # 4: 0, 0.000
-    # Joint
-    # 5: 68546, 68.546
-    # Joint
-    # 6: 0, 0.000
-
-

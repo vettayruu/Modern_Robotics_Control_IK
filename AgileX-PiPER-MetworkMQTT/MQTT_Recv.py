@@ -22,7 +22,7 @@ import ipget
 load_dotenv(os.path.join(os.path.dirname(__file__),'.env'))
 
 MQTT_SERVER = os.getenv("MQTT_SERVER", "sora2.uclab.jp")
-USER_UUID = "84f289d0-bf07-4ad2-baf1-a4c8f7c9a763-tm974s6-viewer"
+USER_UUID = "84f289d0-bf07-4ad2-baf1-a4c8f7c9a763-t923nea-viewer"
 MQTT_CTRL_TOPIC ="vr/" + USER_UUID # MANAGE_RECV_TOPIC で動的に変更される
 
 ROBOT_UUID = os.getenv("ROBOT_UUID","no-uuid")
