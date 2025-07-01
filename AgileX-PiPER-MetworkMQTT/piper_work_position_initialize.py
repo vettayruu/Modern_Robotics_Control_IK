@@ -72,5 +72,3 @@ if __name__ == "__main__":
     piper.JointCtrl(joint_0, joint_1, joint_2, joint_3, joint_4, joint_5)
     piper.GripperCtrl(0, 1000, 0x01, 0)
 
-    time.sleep(1)
-    print(piper.GetArmJointMsgs())
