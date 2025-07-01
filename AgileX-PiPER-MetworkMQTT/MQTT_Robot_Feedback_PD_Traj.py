@@ -1,4 +1,8 @@
 import sys
+import subprocess
+import os
+import atexit
+
 import time
 import numpy as np
 import multiprocessing.shared_memory as sm
@@ -58,8 +62,34 @@ except FileExistsError:
     arr = np.ndarray((16,), dtype=np.float32, buffer=shm.buf)
     print("Shared memory PiPER already exists.")
 
+def cleanup():
+    if monitor_proc.poll() is None:  # 子进程还活着
+        print("Terminating Monitor UI...")
+        monitor_proc.terminate()     # 发送 SIGTERM
+        try:
+            monitor_proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            monitor_proc.kill()
+            print("Monitor forcibly killed.")
+
 
 if __name__ == "__main__":
+    # Open Monitor
+    monitor_script = os.path.join(os.getcwd(), "MQTT_Robot_Monitor_UI.py")
+    monitor_proc = subprocess.Popen([sys.executable, monitor_script])
+    print("Monitor UI launched.")
+
+    def cleanup():
+        if monitor_proc.poll() is None:
+            print("Terminating Monitor UI...")
+            monitor_proc.terminate()
+            try:
+                monitor_proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                monitor_proc.kill()
+
+    atexit.register(cleanup)
+
     # initialize piper robot
     piper = C_PiperInterface_V2("can0")
     piper.ConnectPort()
