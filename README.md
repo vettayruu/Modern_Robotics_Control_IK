@@ -124,13 +124,13 @@ You can simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarob
 
    Navigate to your CoppeliaSim installation directory and run:
   
-  ```bash
-  ./coppeliaSim
-  ```
+    ```bash
+    ./coppeliaSim
+    ```
 
 3. Load the simulation scene
 
-   Open the scene file: "piper_robot_sample.ttt"
+   Open the scene file: "piper_robot_sample.ttt" in the floder "AgileX-PiPER-MetworkMQTT"
 
 4. Start the simulation
 
