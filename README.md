@@ -112,7 +112,7 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
      ```
 
 ## 🧪 Run in Simulator
-You can simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarobotics.com/).
+You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarobotics.com/).
 
 ### Step-by-Step:
 
@@ -134,7 +134,7 @@ You can simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarob
 
 4. Start the simulation
 
-  Click the "Play" button in CoppeliaSim to start the simulation.
+   Click the "Play" button in CoppeliaSim to start the simulation.
 
 5. Run the simulator control script
    ```bash
