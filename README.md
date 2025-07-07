@@ -82,26 +82,27 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    
    Look for the USER_UUID in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
    
-5. **Run the robot controller script**
+5. **Run the Robot Controller Script**
 
    Choose one of the following options depending on your control needs:
-   
-   **PD Control + Trajectory Planning**
-   ```bash
-   python MQTT_Robot_Feedback_PD_Traj.py
-   ```
-   
-   **PD Control**
-   ```bash
-   python MQTT_Robot_Feedback_PD.py
-   ```
-   
-   **Direct Control Signal**
-   ```bash
-   python MQTT_Robot_Control.py
-   ```
 
-   The most stable is **PD Control + Trajectory Planning**.
+   - **PD Control + Trajectory Planning**  
+     This is the most stable option, as both velocity and acceleration are smoothly planned.
+     ```bash
+     python MQTT_Robot_Feedback_PD_Traj.py
+     ```
+
+   - **PD Control**  
+     Basic proportional-derivative control without trajectory planning.
+     ```bash
+     python MQTT_Robot_Feedback_PD.py
+     ```
+
+   - **Direct Control Signal**  
+     Sends raw control signals directly to the robot without any feedback or planning.
+     ```bash
+     python MQTT_Robot_Control.py
+     ```
 
 ## ⚠️ Notifications
 
