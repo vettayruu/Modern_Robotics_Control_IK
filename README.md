@@ -108,13 +108,13 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
 
 1. **Keep the VR controller within camera view**  
    The pose of the VR controller is estimated using both the onboard **accelerometer** and the **tracking camera** located on the side of the VR headset.  
-   > If the controller goes out of view, pose estimation may become inaccurate, resulting in input drift.
+   > ⚠️ If the controller goes out of view, pose estimation may become inaccurate, resulting in input drift.
 
 2. **Wait for system initialization**  
    After putting on the VR headset or restarting the system, **always wait until initialization is complete**.  
-   > Skipping this step may result in control drift or unstable input.  
-   > ✅ If you can see the controller moving in sync with your hand, it is functioning correctly.  
+   > Skipping this step may result in control drift or unstable input.
    > ⚠️ If the controller appears frozen or unresponsive, it may indicate a tracking issue.
+   > ✅ If you can see the controller moving in sync with your hand, it is functioning correctly.  
 
 ## 📚 Citations
 
