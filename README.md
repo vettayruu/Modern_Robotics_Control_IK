@@ -53,22 +53,24 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
 
    Open the PiPER SDK Tools and perform the following operations:
 
+      (0) Click Find CAN Port
+      
       (1) Click Reset
       
       (2) Click Enable
       
       (3) Click Go Zero
       
-   🔁 If the robot fails to go to the zero position, repeat this step a few times until successful.
+   🔁 If the robot fails to go to the zero position, repeat (1)~(3) this step a few times until successful.
 
-3. **Set the robot to the working position**
+4. **Set the robot to the working position**
    
    Run the following script:
    ```bash
    python piper_work_position_initialize.py
    ```
 
-4. **Retrieve your USER_UUID from the Viewer**
+5. **Retrieve your USER_UUID from the Viewer**
    
    (check "mqtt_teleoperation_start.mp4" in the video folder )
    
@@ -87,7 +89,7 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    
    Look for the USER_UUID in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
    
-5. **Run the Robot Controller Script**
+6. **Run the Robot Controller Script**
 
    Choose one of the following options depending on your control needs:
 
