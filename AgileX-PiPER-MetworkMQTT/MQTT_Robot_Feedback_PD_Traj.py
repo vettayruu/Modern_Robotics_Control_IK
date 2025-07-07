@@ -148,7 +148,7 @@ if __name__ == "__main__":
             # Trajectory Plan
             theta_current = joint_feedback
             theta_target =control_signal
-            if mse > 1e-6:
+            if mse > 5e-6:
                 theta_traj = mr.JointTrajectory(theta_current, theta_target, Tf, N, method)
 
                 for theta in theta_traj:
