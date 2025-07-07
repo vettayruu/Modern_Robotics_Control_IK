@@ -1,6 +1,6 @@
 # MetaworkMQTT Protocol-Based PiPER Controller
 
-![System Architecture](./MQTT_Communication_Framework.svg)
+![System Architecture](./MQTT_Control_Framework.svg)
 
 ## 🚀 Quick Start
 
