@@ -28,7 +28,7 @@ const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "vr/"; 
+const MQTT_CTRL_TOPIC = "control/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
 export default function DynamicHome(props) {
