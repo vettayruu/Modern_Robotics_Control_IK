@@ -164,6 +164,6 @@ The inverse kinematics (IK) implementation in this project is based on the **Mod
 
 ## 📹 Demo Videos
 
-- [▶️ Demo 1: VR-Based Robot Control](https://youtu.be/y29keqx_X6Q)
-- [▶️ Demo 2: Trajectory Tracking in Simulation](https://youtu.be/i-OcnSqnyN8)
+- [▶️ Demo 1](https://youtu.be/y29keqx_X6Q)
+- [▶️ Demo 2](https://youtu.be/i-OcnSqnyN8)
 
