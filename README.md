@@ -118,7 +118,9 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
 2. **Wait for system initialization**  
    After putting on the VR headset or restarting the system, **always wait until initialization is complete**.  
    Skipping this step may result in control drift or unstable input.
+   
    > ⚠️ If the controller appears frozen or unresponsive, it may indicate a tracking issue.
+   
    > ✅ If you can see the controller moving in sync with your hand, it is functioning correctly.  
 
 ## 📚 Citations
