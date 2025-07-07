@@ -2,6 +2,8 @@
 
 ![System Architecture](./MQTT_Control_Framework.svg)
 
+*Figure 1: Metawork MQTT Teleoperation Framework*
+
 ## 🚀 Quick Start
 
 ### 🧩 Step 1: Run MQTT Controller (User Site)
