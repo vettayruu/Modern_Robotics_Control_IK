@@ -111,6 +111,36 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
      python MQTT_Robot_Control.py
      ```
 
+## 🧪 Run in Simulator
+You can simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarobotics.com/).
+
+### Step-by-Step:
+
+1. **Download CoppeliaSim**
+
+   Visit the official website to download the latest version:
+
+2. **Launch CoppeliaSim**
+
+   Navigate to your CoppeliaSim installation directory and run:
+  
+  ```bash
+  ./coppeliaSim
+  ```
+
+3. Load the simulation scene
+
+   Open the scene file: "piper_robot_sample.ttt"
+
+4. Start the simulation
+
+  Click the "Play" button in CoppeliaSim to start the simulation.
+
+5. Run the simulator control script
+   ```bash
+   python MQTT_Robot_Simulator.py
+   ```
+
 ## ⚠️ Notifications
 
 1. **Keep the VR controller within camera view**  
