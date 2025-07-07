@@ -61,7 +61,7 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
       
       (3) Click Go Zero
       
-   🔁 If the robot fails to go to the zero position, repeat (1)~(3) this step a few times until successful.
+   🔁 If the robot fails to go to the zero position, repeat steps (1)~(3) a few times until successful.
 
 4. **Set the robot to the working position**
    
