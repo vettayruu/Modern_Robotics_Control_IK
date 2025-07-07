@@ -40,7 +40,7 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    
    (check "agilex_pipier_connect.mkv" in the video folder )
    
-   Download the PiPER SDK UI
+   🌐 Download the PiPER SDK UI
    
    ```arduion
    https://github.com/agilexrobotics/Piper_sdk_ui.git
@@ -56,35 +56,69 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
       
    🔁 If the robot fails to go to the zero position, repeat this step a few times until successful.
 
-5. **Set the robot to the working position**
+3. **Set the robot to the working position**
+   
    Run the following script:
    ```bash
    python piper_work_position_initialize.py
    ```
 
-6. **Retrieve your USER_UUID from the Viewer**
-   Open the Viewer in your browser: https://<your-server-address>/viewer
+4. **Retrieve your USER_UUID from the Viewer**
+   
+   (check "mqtt_teleoperation_start.mp4" in the video folder )
+   
+   Open the Viewer in your browser:
+   
+   ```arduion
+   https://<your-server-address>/viewer
+   ```
+
+   For example:
+   ```arduion
+   https://192.168.197.37:3000/viewer/
+   ```
    
    Press F12 to open Developer Tools
    
-   Look for the USER_UUID in the console or network tab and copy it
+   Look for the USER_UUID in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
    
-7. 
-   
-8. Activate can bus: bash can_activate.sh can0 1000000
-9. Start Piper_sdk_ui
-   In Piper SDK Tools
-   (1) Reset
-   (2) Enable
-   (3) Go Zero
-   If the robot can not go zero, try several times
-10. Set the robot to work position. Run code "piper_work_position_initialize.py"
-11. Memo the UUID from the viewer. Open the viewer on the browser, press F12, and check "USER_UUID"
-12. Copy the UUID and change USER_UUID in "MQTT_Recv.py"
-13. Run robot controller "MQTT_Robot_Feedback_PD.py" with PD control, ""MQTT_Robot_Feedback_PD_Traj.py" with PD + Trajectory Plan,
-   "MQTT_Robot_Control.py" send the control signal directly
+5. **Run the robot controller script**
 
+   Choose one of the following options depending on your control needs:
    
-The IK is based on Modern Robotics. 
+   **PD Control + Trajectory Planning**
+   ```bash
+   python MQTT_Robot_Feedback_PD_Traj.py
+   ```
+   
+   **PD Control**
+   ```bash
+   python MQTT_Robot_Feedback_PD.py
+   ```
+   
+   **Direct Control Signal**
+   ```bash
+   python MQTT_Robot_Control.py
+   ```
 
-Source code: https://github.com/NxRLab/ModernRobotics
+   The most stable is **PD Control + Trajectory Planning**.
+
+## ⚠️ Notifications
+
+1. **Keep the VR controller within camera view**  
+   The pose of the VR controller is estimated using both the onboard **accelerometer** and the **tracking camera** located on the side of the VR headset.  
+   > If the controller goes out of view, pose estimation may become inaccurate, resulting in input drift.
+
+2. **Wait for system initialization**  
+   After putting on the VR headset or restarting the system, **always wait until initialization is complete**.  
+   > Skipping this step may result in control drift or unstable input.  
+   > ✅ If you can see the controller moving in sync with your hand, it is functioning correctly.  
+   > ⚠️ If the controller appears frozen or unresponsive, it may indicate a tracking issue.
+
+## 📚 Citations
+
+The inverse kinematics (IK) implementation in this project is based on the **Modern Robotics** library by Kevin Lynch et al.
+
+- 📘 Book: *Modern Robotics: Mechanics, Planning, and Control*  
+- 💻 Source Code: [NxRLab/ModernRobotics GitHub Repository](https://github.com/NxRLab/ModernRobotics)
+
