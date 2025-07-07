@@ -2,7 +2,7 @@
 
 ## 🚀 Quick Start
 
-### 🧩 Step 1: Run the MQTT Controller
+### 🧩 Step 1: Run MQTT Controller (User Site)
 ```bash
 cd ./src/app
 npm run dev-https
@@ -26,7 +26,7 @@ https://sora2.uclab.jp/menroll
 ```
 This page provides a real-time interface for observing user information.
 
-###  🧩 Step 2: Run PiPER Controller
+###  🧩 Step 2: Run PiPER Controller (Robot Site)
 Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
 
 1. **Activate the CAN bus**
