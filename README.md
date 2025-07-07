@@ -1,8 +1,9 @@
 # MetaworkMQTT Protocol-Based PiPER Controller
 
-![System Architecture](./MQTT_Control_Framework.svg)
-
-*Figure 1: Metawork MQTT Teleoperation Framework*
+<div align="center">
+  <img src="./MQTT_Control_Framework.svg" alt="System Architecture" width="1000"/>
+  <p><em>Figure 1: System Architecture of PiPER Control via MetaworkMQTT</em></p>
+</div>
 
 ## 🚀 Quick Start
 
