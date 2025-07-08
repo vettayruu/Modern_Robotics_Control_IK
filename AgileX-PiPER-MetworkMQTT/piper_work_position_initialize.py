@@ -58,7 +58,6 @@ if __name__ == "__main__":
     position = [0, -0.27473 + np.radians(90), 1.44144 - np.radians(169.997), 0, 1.22586 - 0.03, 0]
     # position = [0, 0, 0, 0, -0.03, 0]
     # [0, -0.27473+np.rad(90), 1.44144-np.radians(169.997), 0, 1.22586, 0] 72.494
-    # print(1.44144-np.radians(169.997))
     print("target_joint_angles:", np.degrees(position))
 
     joint_0 = round(position[0] * factor)
