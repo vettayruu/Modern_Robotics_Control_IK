@@ -31,6 +31,16 @@ https://sora2.uclab.jp/menroll
 ```
 This page provides a real-time interface for observing user information.
 
+🛠 Customize Your Project Name
+
+To differentiate your project from others, it is **recommended to change the project name** in the `package.json` file.
+
+Edit line 2 of `package.json`:
+
+```json
+"name": "PiPER-control-<YourName>",
+```
+
 ###  🧩 Step 2: Run PiPER Controller (Robot Site)
 Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
 
