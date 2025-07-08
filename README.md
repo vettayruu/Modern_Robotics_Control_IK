@@ -19,11 +19,18 @@ cd ./src/app
 npm install
 ```
 
-🌐 After the server is running, you can access the VR Viewer in your browser by appending /viewer to the server address. For example:
-```arduion
-https://192.168.197.37:3000/viewer/
-```
-This interface is used to visualize and send VR controller data via MQTT.
+🌐 After the server is running, you can access the VR Viewer in your browser by appending /viewer to the server address. 
+
+   Open the Viewer in your browser:
+   ```arduion
+   https://<your-server-address>/viewer
+   ```
+
+  For example:
+  ```arduion
+  https://192.168.197.37:3000/viewer/
+  ```
+  This interface is used to visualize and send VR controller data via MQTT.
 
 📊 You can also access the status monitor via the following URL:
 ```arduion
@@ -127,10 +134,8 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
      python MQTT_Robot_Control.py
      ```
 
-## 🧪 Run in Simulator
+### 🧪 Run in Simulator
 You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppeliarobotics.com/).
-
-### Step-by-Step:
 
 1. **Download CoppeliaSim**
 
@@ -160,8 +165,23 @@ You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppel
    ```bash
    python MQTT_Robot_Simulator.py
    ```
+
+## 🕶️ Open MQTT Controller in VR
+
+To operate the robot in VR, open the controller interface in the browser inside your VR headset:
+
+  ```arduion
+  https://<your-server-address>
+  ```
+
+  For example:
+  ```arduion
+  https://192.168.197.37:3000
+  ```
+
+  Once the page is open, press the "AR" button to enter augmented reality mode.
    
-## 🎮 Controller Operations
+### 🎮 Controller Operations
 
 The following input mappings are used to operate the PiPER robot via the VR controller:
 
@@ -174,7 +194,7 @@ The following input mappings are used to operate the PiPER robot via the VR cont
 > Make sure the controller is tracked and visible to the VR camera to ensure accurate input.
 
 
-## ⚠️ Notifications
+### ⚠️ Notifications
 
 1. **Keep the VR controller within camera view**  
    The pose of the VR controller is estimated using both the onboard **accelerometer** and the **tracking camera** located on the side of the VR headset.  
