@@ -68,17 +68,25 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    https://github.com/agilexrobotics/Piper_sdk_ui.git
    ```
 
-   Open the PiPER SDK Tools and perform the following operations:
+   Open PiPER SDK UI
+   ```bash
+   cd Piper_sdk_ui
+   python piper_ui.py 
+   ```
 
-      (0) Click Find CAN Port
+   To reset the robot, open the PiPER SDK Tools and perform the following operations:
+
+      (0) Click **Find CAN Port**
       
-      (1) Click Reset
+      (1) Click **Reset**
       
-      (2) Click Enable
+      (2) Click **Enable**
       
-      (3) Click Go Zero
+      (3) Click **Go Zero**
       
    🔁 If the robot fails to go to the zero position, repeat steps (1)~(3) a few times until successful.
+
+   To reset the tool, Click **Go Gripper Zero**
 
 4. **Set the robot to the working position**
    
