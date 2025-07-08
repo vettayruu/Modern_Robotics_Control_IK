@@ -86,7 +86,7 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
       
    🔁 If the robot fails to go to the zero position, repeat steps (1)~(3) a few times until successful.
 
-   To reset the tool, Click **Go Gripper Zero**
+   To reset the tool, Click **Gripper Zero**
 
 4. **Set the robot to the working position**
    
