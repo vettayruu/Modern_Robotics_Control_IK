@@ -241,7 +241,7 @@ conda activate Modern_Robotics_Control_IK
 
 If you forgot your conda environment name:
 ```bash
- conda info --envs
+conda info --envs
 ```
 to check your conda environemnt list.
 
