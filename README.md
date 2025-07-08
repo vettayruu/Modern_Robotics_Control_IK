@@ -97,9 +97,11 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    
    Press F12 to open Developer Tools
    
-   Look for the USER_UUID in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
+   Look for the **USER_UUID** in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
+
+   ⚠️ **Important**: **USER_UUID changes every time** the MQTT Controller (User Site) is restarted. You must repeat this step each time you launch the MQTT Controller to ensure proper functionality.
    
-6. **Run the Robot Controller Script**
+7. **Run the Robot Controller Script**
 
    Choose one of the following options depending on your control needs:
 
@@ -154,6 +156,7 @@ You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppel
    ```bash
    python MQTT_Robot_Simulator.py
    ```
+   
 ## 🎮 Controller Operations
 
 The following input mappings are used to operate the PiPER robot via the VR controller:
