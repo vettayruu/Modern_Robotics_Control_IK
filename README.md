@@ -95,6 +95,8 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    python piper_work_position_initialize.py
    ```
 
+   ⚠️ If this is your first time using the robot, **calibration** may be required before running the script.
+
 5. **Retrieve your USER_UUID from the Viewer**
    
    (check "mqtt_teleoperation_start.mp4" in the video folder )
