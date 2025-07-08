@@ -97,7 +97,11 @@ Follow the steps below to control the **AgileX-PiPER** robot via MQTT:
    
    Press F12 to open Developer Tools
    
-   Look for the **USER_UUID** in the console or network tab and copy it to the "MQTT_Recv.py", Line 25
+   Look for the **USER_UUID** in the console or network tab and copy it to the "MQTT_Recv.py", Line 25. For example:
+
+   ```python
+   USER_UUID = "84f289d0-bf07-4ad2-baf1-a4c8f7c9a763-qk4b9zg-viewer"
+   ```
 
    ⚠️ **Important**: **USER_UUID changes every time** the MQTT Controller (User Site) is restarted. You must repeat this step each time you launch the MQTT Controller to ensure proper functionality.
    
