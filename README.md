@@ -120,7 +120,11 @@ You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppel
 
    Visit the official website to download the latest version:
 
-2. **Launch CoppeliaSim**
+   ```arduion
+   https://www.coppeliarobotics.com/
+   ```
+
+3. **Launch CoppeliaSim**
 
    Navigate to your CoppeliaSim installation directory and run:
   
@@ -128,15 +132,15 @@ You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppel
     ./coppeliaSim
     ```
 
-3. Load the simulation scene
+4. Load the simulation scene
 
    Open the scene file: "piper_robot_sample.ttt" in the floder "AgileX-PiPER-MetworkMQTT"
 
-4. Start the simulation
+5. Start the simulation
 
    Click the "Play" button in CoppeliaSim to start the simulation.
 
-5. Run the simulator control script
+6. Run the simulator control script
    ```bash
    python MQTT_Robot_Simulator.py
    ```
