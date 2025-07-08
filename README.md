@@ -140,6 +140,18 @@ You can also simulate PiPER robot control using [CoppeliaSim](https://www.coppel
    ```bash
    python MQTT_Robot_Simulator.py
    ```
+## 🎮 Controller Operations
+
+The following input mappings are used to operate the PiPER robot via the VR controller:
+
+| Input Combination         | Action       |
+|---------------------------|--------------|
+| Trigger                   | Move the robot (6-DoF pose) |
+| Grip + Button A           | Release  |
+| Grip + Button B           | Grasp   |
+
+> Make sure the controller is tracked and visible to the VR camera to ensure accurate input.
+
 
 ## ⚠️ Notifications
 
