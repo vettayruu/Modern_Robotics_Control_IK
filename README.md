@@ -220,3 +220,49 @@ The inverse kinematics (IK) implementation in this project is based on the **Mod
 - [▶️ Demo 1: Cloth Folding 1](https://youtu.be/y29keqx_X6Q)
 - [▶️ Demo 2: Cloth Folding 2](https://youtu.be/i-OcnSqnyN8)
 
+## 🐍 Python Packages
+
+It is recommended to use a `conda` environment to manage dependencies, for example:
+
+```bash
+conda create -n Modern_Robotics_Control_IK python=3.12
+conda activate Modern_Robotics_Control_IK
+```
+
+If you forgot your conda environment name:
+```bash
+ conda info --envs
+```
+to check your conda environemnt list.
+
+### Dependencies
+📐 Math & Utilities
+```bash
+pip install numpy
+```
+
+📡 Communication
+```bash
+pip install paho-mqtt
+pip install python-dotenv
+pip install ipget
+```
+
+🤖 Robotics
+```bash
+pip install piper-sdk
+pip install modern-robotics
+```
+
+🖥️ Robot Monitor UI
+```bash
+pip install PyQt5
+pip install pyqtgraph
+```
+
+🧪 Simulator (CoppeliaSim Remote API)
+```bash
+pip install coppeliasim-zmqremoteapi-client
+```
+
+
